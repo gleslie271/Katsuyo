@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
 /* Katsuyō stylesheet
-   Layout: the drill fills the page with session stats below it; Score, Study settings and the cheat sheet open as dialogs.
+   Layout: the drill fills the page with session stats below it; Score, Study settings, Settings (the cog) and the cheat sheet open as dialogs.
    Look: washi paper and sumi ink. Brush-script word, mincho for Japanese, a vermilion seal, square ink-ruled panels. */
 
 /* ---------- Theme tokens ---------- */
@@ -33,8 +33,11 @@
   --f-hand: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;                  /* Japanese text */
   --f-brush: "Yuji Syuku", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;   /* the big brush word */
   --f-ui: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;       /* everything else */
+  --f-brand: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;                 /* the seal and title, whatever the font setting */
 
   --t-xs: .75rem; --t-sm: .875rem; --t-md: 1rem; --t-lg: 1.25rem; --t-xl: 2rem;            /* type scale */
+  /* Sizes are in rem (or em) so Text size in Settings (the cog) scales the whole page by changing the root font size;
+     --text-scale is the same factor, for the few sizes that have to stay in px or vw */
 }
 /* Sumi night: dark paper, warm off-white ink. Follows the system setting unless the viewer picked light */
 @media (prefers-color-scheme: dark) {
@@ -57,6 +60,11 @@
   color-scheme: dark;
 }
 
+/* Japanese font (Settings → Display). Brush is the default above; Print sets the big word in mincho like everything
+   else, and Clean sets all the Japanese in the plain gothic, the easiest to read */
+:root[data-font="print"] { --f-brush: var(--f-hand); }
+:root[data-font="clean"] { --f-hand: var(--f-ui); --f-brush: var(--f-ui); }
+
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
 [hidden] { display: none !important; } /* beats display rules like .empty's grid */
@@ -77,23 +85,26 @@ button { font: inherit; color: inherit; }
 kbd { font-family: var(--f-ui); font-size: .85em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--paper); }
 
 /* ---------- Page and header ---------- */
-.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 24px; }
+.wrap { max-width: 67.5rem; margin: 0 auto; display: grid; gap: 24px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; }
 
 header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 /* The red 活用 seal, set vertically and tilted like a stamped chop */
 .seal {
-  width: 50px; height: 50px; flex: none; background: var(--shu); color: #F7F1E6; border-radius: 4px;
+  width: 3.125rem; height: 3.125rem; flex: none; background: var(--shu); color: #F7F1E6; border-radius: 4px;
   display: grid; place-items: center; transform: rotate(-3deg);
-  font-family: var(--f-hand); font-weight: 800; font-size: 17px; line-height: 1; writing-mode: vertical-rl; letter-spacing: .08em;
+  font-family: var(--f-brand); font-weight: 800; font-size: 1.0625rem; line-height: 1; writing-mode: vertical-rl; letter-spacing: .08em;
 }
-.brand h1 { margin: 0; font-family: var(--f-hand); font-weight: 800; font-size: 1.75rem; line-height: 1.1; letter-spacing: .04em; }
+.brand h1 { margin: 0; font-family: var(--f-brand); font-weight: 800; font-size: 1.75rem; line-height: 1.1; letter-spacing: .04em; }
 .brand p { margin: 2px 0 0; color: var(--muted); font-size: var(--t-sm); }
-/* Score and Study settings sit at the right and wrap together on phones */
+/* Score, Study settings and the Settings cog sit at the right and wrap together on phones */
 .head-nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 22px; }
 /* Header actions read as inked links rather than boxed buttons */
-.btn.head-btn { display: inline-flex; align-items: baseline; gap: 8px; background: none; border: 0; border-bottom: 1px solid var(--ink); padding: 8px 0 4px; min-height: 44px; }
+.btn.head-btn { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; background: none; border: 0; border-bottom: 1px solid var(--ink); padding: 8px 0 4px; min-height: 44px; text-align: left; }
+.head-btn > span:first-child { white-space: nowrap; } /* "設定 Study settings" stays on one line; the summary wraps under it on narrow screens */
 .btn.head-btn:hover { background: none; color: var(--shu); border-bottom-color: var(--shu); }
+.btn.cog-btn { align-items: center; justify-content: center; min-width: 44px; padding: 6px 4px 4px; }
+.cog-btn svg { width: 1.5rem; height: 1.5rem; display: block; }
 .settings-sum { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; } /* the form count beside Study settings */
 
 /* ---------- The drill sheet ---------- */
@@ -101,7 +112,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .drill-row { display: flex; align-items: stretch; }
 .drill-row .sheet { flex: 1 1 auto; min-width: 0; }
 .form-strip {
-  flex: none; width: 64px; padding: 30px 0; display: flex; justify-content: center;
+  flex: none; width: 4rem; padding: 30px 0; display: flex; justify-content: center;
   writing-mode: vertical-rl; font-family: var(--f-hand); font-weight: 600; font-size: 1.35rem; letter-spacing: .5em; color: var(--shu);
 }
 /* Narrow screens: the form name moves under the sheet and reads across */
@@ -130,7 +141,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .meaning { color: var(--muted); margin-top: 6px; font-size: var(--t-sm); letter-spacing: .2em; text-transform: uppercase; }
 .no-meaning .meaning { display: none; }
 /* a single ink stroke under the word */
-.brush { width: 120px; height: 3px; border-radius: 2px; background: var(--ink); opacity: .75; margin: 16px auto 0; }
+.brush { width: 7.5rem; height: 3px; border-radius: 2px; background: var(--ink); opacity: .75; margin: 16px auto 0; }
 /* "Convert to  Polite Past Negative": each part of the form in its own color */
 .target { margin-top: 22px; display: inline-flex; align-items: baseline; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .target-lbl { color: var(--muted); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .14em; } /* "Convert to" / "Say in Japanese" */
@@ -145,7 +156,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 /* 正解 stamp, pressed onto the word like a teacher's hanko */
 .word-wrap { position: relative; }
 .stamp {
-  position: absolute; left: 50%; top: 50%; width: 170px; height: 170px; margin: -85px 0 0 -85px;
+  position: absolute; left: 50%; top: 50%; width: 10.625rem; height: 10.625rem; margin: -5.3125rem 0 0 -5.3125rem;
   pointer-events: none; opacity: .95; transform: rotate(-12deg);
 }
 .stamp svg { width: 100%; height: 100%; overflow: visible; display: block; }
@@ -169,7 +180,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 /* Genkō yōshi: one square per kana. Each glyph is 1em wide plus .75em spacing, so cells are 1.75em and scale together */
 #answer {
   width: 100%; height: calc(1.75em + 2px); border: 1px solid var(--rule); border-radius: 0; color: var(--ink);
-  font-family: var(--f-hand); font-size: clamp(20px, 3.4vw, 32px); letter-spacing: .75em; padding: 0 0 0 .375em;
+  font-family: var(--f-hand); font-size: calc(clamp(20px, 3.4vw, 32px) * var(--text-scale, 1)); letter-spacing: .75em; padding: 0 0 0 .375em;
   background-color: var(--sheet);
   background-image: repeating-linear-gradient(90deg, transparent 0 calc(1.75em - 1px), var(--rule-soft) calc(1.75em - 1px) 1.75em);
 }
@@ -178,7 +189,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 #answer[readonly] { border-color: var(--rule-soft); }    /* locked after a correct answer */
 /* Phones fit too few squares for long answers, so the box becomes a single ink underline */
 @media (max-width: 560px) {
-  #answer { height: auto; font-size: 26px; letter-spacing: .08em; padding: 4px 2px 8px; border: 0; border-bottom: 2px solid var(--ink); background: transparent; }
+  #answer { height: auto; font-size: 1.625rem; letter-spacing: .08em; padding: 4px 2px 8px; border: 0; border-bottom: 2px solid var(--ink); background: transparent; }
   #answer[readonly] { border-bottom-color: var(--rule); }
 }
 
@@ -212,8 +223,12 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .fb-head strong { font-size: var(--t-lg); }
 .fb-head .jp { font-family: var(--f-hand); color: var(--shu); font-size: var(--t-lg); }
 .fb-head.miss .jp { color: var(--muted); }
+.fb-word { margin: 0 10px 0 auto; } /* 辞書 Dictionary, at the right of the verdict, lined up under Cheat sheet */
 .ans-big { font-family: var(--f-hand); font-size: 1.9rem; line-height: 1.5; overflow-wrap: anywhere; } /* the answer with furigana */
 .ans-big rt { font-size: .36em; color: var(--muted); font-family: var(--f-ui); letter-spacing: .05em; }
+/* What the answer means, after it: "— I ate" */
+.ans-en { font-family: var(--f-ui); font-size: 1.05rem; color: var(--muted); }
+.ans-big .ans-en { display: inline-block; margin-left: .6em; vertical-align: .25em; overflow-wrap: normal; }
 .given { color: var(--muted); font-size: var(--t-sm); }
 /* Wrong tries: readable tags in a soft red rather than struck through */
 .tried { font-family: var(--f-hand); font-size: 1.05rem; color: var(--ink); background: var(--shu-soft); padding: 0 7px; margin-left: 4px; }
@@ -233,7 +248,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
 /* ---------- Blocks: the session stats and the sections inside dialogs ---------- */
 .panel { display: grid; gap: 36px; }
-.band { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 32px 40px; align-items: start; }
+.band { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr)); gap: 32px 40px; align-items: start; }
 /* Section heading: English title left, Japanese right, over an ink line */
 .block h2 {
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
@@ -254,7 +269,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .tally .lbl [lang="ja"] { margin-right: .4em; }
 
 /* ---------- Dialogs ---------- */
-/* Shared by the Score, Study settings and Cheat sheet dialogs */
+/* Shared by the Score, Study settings, Settings, Dictionary and Cheat sheet dialogs */
 dialog.modal {
   max-height: calc(100% - 24px); padding: 0;
   border: 1px solid var(--rule); border-radius: 2px; background: var(--sheet); color: var(--ink); overflow: hidden;
@@ -265,8 +280,9 @@ dialog.modal::backdrop { background: rgba(8, 11, 18, .55); }
 .modal-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid var(--rule); }
 .modal-head h2 { margin: 0; font-size: var(--t-lg); }
 .modal-head h2 .jp { font-family: var(--f-hand); font-weight: 600; color: var(--shu); margin-left: 6px; }
-#settingsClose, #scoreClose { margin-left: auto; } /* pushed to the right; the cheat sheet's zoom slider does that for its Close */
-dialog.settings { width: min(1100px, calc(100% - 24px)); } /* Score and Study settings */
+#settingsClose, #scoreClose, #wordClose, #prefsClose { margin-left: auto; } /* pushed to the right; the cheat sheet's zoom slider does that for its Close */
+dialog.settings { width: min(68.75rem, calc(100% - 24px)); } /* Score, Study settings and Settings */
+dialog.settings.prefs { width: min(42rem, calc(100% - 24px)); } /* Settings has two sections, side by side when they fit */
 .settings-body { overflow: auto; padding: 20px 20px 28px; }
 
 /* Score dialog: one bar per form, split by how much help each answer needed */
@@ -274,7 +290,7 @@ dialog.settings { width: min(1100px, calc(100% - 24px)); } /* Score and Study se
 .sc-overall b { font-size: 1.4rem; font-variant-numeric: tabular-nums; margin-right: 4px; }
 .sc-time { margin: 0 0 10px; font-size: var(--t-sm); color: var(--muted); } /* study time, when the Study timer is on */
 .sc-time b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
-.score { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px 32px; }
+.score { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18.75rem), 1fr)); gap: 16px 32px; }
 .score li { display: grid; gap: 5px; min-width: 0; }
 .sc-top { display: flex; align-items: center; gap: 8px; }
 .sc-kind { font-size: var(--t-xs); color: var(--muted); }
@@ -306,7 +322,7 @@ dialog.settings { width: min(1100px, calc(100% - 24px)); } /* Score and Study se
 /* ---------- Study settings ---------- */
 .settings-note { font-size: var(--t-sm); color: var(--muted); }
 /* Sections flow like newspaper columns: no fixed placement, no gaps, as many columns as fit */
-.flow { columns: 280px 3; column-gap: 40px; }
+.flow { columns: 17.5rem 3; column-gap: 40px; }
 .flow > .block { break-inside: avoid; margin-bottom: 32px; }
 /* A group of forms: dotted heading, an All/None toggle, then its chips */
 .group { display: grid; gap: 8px; }
@@ -336,9 +352,16 @@ dialog.settings { width: min(1100px, calc(100% - 24px)); } /* Score and Study se
 .preset-msg { margin-top: 6px; }
 /* Versions: a label column (Tense, Polarity, Speech) and its chips */
 .pairs { display: grid; gap: 8px; }
-.pair { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); align-items: start; gap: 8px; }
-.pair-name { font-size: var(--t-sm); color: var(--muted); padding-top: 5px; } /* lines up with the first row of chips */
+/* The chips move under their label when the two don't fit side by side (a phone with a large Text size) */
+.pair { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 8px; }
+.pair > .chips { flex: 1 1 11rem; min-width: 0; }
+.pair-name { flex: 0 0 6.25em; font-size: var(--t-sm); color: var(--muted); padding-top: 5px; } /* lines up with the first row of chips */
 .pairs + .muted-note { margin-top: 10px; }
+.opt-row { margin-bottom: 12px; } /* Display: the Text size and Japanese font rows above the toggles */
+.font-eg { margin-left: .45em; font-size: 1.15em; line-height: 1; } /* 書 in each font, on its chip */
+.font-brush { font-family: "Yuji Syuku", "Shippori Mincho", serif; }
+.font-print { font-family: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif; }
+.font-clean { font-family: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif; }
 
 /* ---------- Cheat sheet ---------- */
 dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen width */
@@ -402,10 +425,10 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
 .tbl tr.now > .hl { box-shadow: inset 0 0 0 2px var(--ai); }
 
 /* Godan endings: which row each form uses, a card per ending, and the て-form groups */
-.row-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 8px; }
+.row-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14.375rem), 1fr)); gap: 8px; }
 .row-legend li { display: flex; gap: 10px; align-items: baseline; background: var(--chip); border-radius: 2px; padding: 8px 12px; font-size: var(--t-sm); }
 .row-name { font-family: var(--f-hand); font-weight: 600; white-space: nowrap; color: var(--ai); }
-.end-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 215px), 1fr)); gap: 10px; }
+.end-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.4375rem), 1fr)); gap: 10px; }
 .end-card { border: 1px solid var(--rule); border-radius: 2px; padding: 10px 14px 12px; background: var(--sheet); }
 .end-card.now { border-color: var(--ai); background: var(--ai-soft); } /* the current word's ending */
 .end-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
@@ -418,6 +441,26 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
 .te-rule .muted { color: var(--muted); font-size: .8em; }
 .te-ex { display: grid; gap: 2px; margin-top: 4px; }
 
+/* ---------- Word card ---------- */
+/* 辞書 Dictionary: the word, its type and meanings, example sentences, and a link to Jisho */
+dialog.word-dlg { width: min(35rem, calc(100% - 24px)); }
+.wd-head { display: flex; align-items: baseline; gap: 4px 16px; flex-wrap: wrap; }
+.wd-word { margin: 0; font-family: var(--f-brush); font-size: 2.75rem; line-height: 1.2; overflow-wrap: anywhere; }
+.wd-kana { font-family: var(--f-hand); font-size: var(--t-lg); color: var(--muted); }
+.wd-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.wd-mean { margin: 12px 0 0; font-size: 1.05rem; }
+.wd-ex { margin-top: 22px; border-top: 1px solid var(--rule-soft); padding-top: 14px; }
+.wd-ex h3 { margin: 0 0 10px; font-size: var(--t-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+.wd-ex h3 [lang="ja"] { font-family: var(--f-hand); letter-spacing: .04em; margin-right: .5em; }
+.wd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.wd-list li { border-left: 2px solid var(--rule); padding-left: 12px; }
+.wd-jp { margin: 0; font-family: var(--f-hand); font-size: 1.2rem; line-height: 1.9; }
+.wd-jp rt { font-size: .5em; color: var(--muted); font-family: var(--f-ui); }
+.wd-jp mark { background: none; color: var(--shu); } /* the word itself, in whatever form the sentence uses */
+.wd-en { margin: 0; color: var(--muted); font-size: var(--t-sm); }
+.wd-more { margin-top: 22px; display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+
 /* ---------- First-visit tour ---------- */
 /* A see-through dialog over the whole page. The spot's huge shadow dims everything but the part being explained,
    and the card beside it says what that part does */
@@ -428,7 +471,7 @@ dialog.tour::backdrop { background: transparent; }
   box-shadow: 0 0 0 200vmax rgba(8, 11, 18, .6); transition: top .3s, left .3s, width .3s, height .3s;
 }
 .tour-card {
-  position: absolute; width: min(380px, calc(100% - 32px)); display: grid; gap: 10px; padding: 18px 22px 16px;
+  position: absolute; width: min(23.75rem, calc(100% - 32px)); display: grid; gap: 10px; padding: 18px 22px 16px;
   background: var(--sheet); color: var(--ink); border: 1px solid var(--rule);
   box-shadow: inset 0 0 0 6px var(--sheet), inset 0 0 0 7px var(--rule-soft), 0 12px 32px rgba(0, 0, 0, .3);
   transition: top .3s, left .3s;
@@ -452,8 +495,12 @@ dialog.tour::backdrop { background: transparent; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
+<!-- Your Text size and Japanese font, set before anything is drawn so the page doesn't jump to them after loading
+     (see applyTextSize and applyFont) -->
+<script>try { const s = JSON.parse(localStorage.getItem('katsuyo.v1') || 'null') || {}, d = document.documentElement; if (s.textSize > 100) { d.style.fontSize = s.textSize + '%'; d.style.setProperty('--text-scale', s.textSize / 100); } if (s.font === 'print' || s.font === 'clean') d.dataset.font = s.font; } catch (e) {}</script>
+
 <div class="wrap">
-  <!-- Header: seal, title, and the Score and Study settings buttons -->
+  <!-- Header: seal, title, and the Score, Study settings and Settings buttons -->
   <header>
     <div class="seal" aria-hidden="true">活用</div>
     <div class="brand">
@@ -466,6 +513,10 @@ dialog.tour::backdrop { background: transparent; }
       </button>
       <button type="button" class="btn ghost head-btn" id="settingsBtn" aria-haspopup="dialog">
         <span><span class="btn-jp" lang="ja">設定</span>Study settings</span> <span class="settings-sum" id="settingsSum"></span>
+      </button>
+      <!-- Settings: text size, display and help. Cog icon from Lucide (ISC license) -->
+      <button type="button" class="btn ghost head-btn cog-btn" id="prefsBtn" aria-haspopup="dialog" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </nav>
   </header>
@@ -499,7 +550,7 @@ dialog.tour::backdrop { background: transparent; }
             <div class="actions">
               <button type="submit" class="btn primary" id="checkBtn"><span class="btn-jp" lang="ja">確認</span>Check</button>
               <button type="button" class="btn ghost" id="revealBtn"><span class="btn-jp" lang="ja">答え</span>Show answer</button>
-              <button type="button" class="btn ghost cheat-btn" id="cheatBtn" aria-haspopup="dialog"><span class="btn-jp" lang="ja">早見表</span>Cheat sheet</button>
+              <button type="button" class="btn primary cheat-btn" id="cheatBtn" aria-haspopup="dialog"><span class="btn-jp" lang="ja">早見表</span>Cheat sheet</button>
             </div>
           </form>
           <div class="typo" id="typoNote" aria-live="polite" hidden><span class="jp" lang="ja">あれ？</span><strong>Looks like a typo.</strong><span>Fix it and press Enter. It won't count against you.</span></div>
@@ -560,7 +611,7 @@ dialog.tour::backdrop { background: transparent; }
   </div>
 </dialog>
 
-<!-- Study settings: what to practice and how questions look -->
+<!-- Study settings: what to practice and how questions are asked -->
 <dialog class="modal settings" id="settingsDlg" aria-labelledby="settingsTitle">
   <div class="modal-head">
     <h2 id="settingsTitle">Study settings</h2>
@@ -593,7 +644,7 @@ dialog.tour::backdrop { background: transparent; }
           <div class="pair"><span class="pair-name">Set</span><div class="chips" id="levelChips"></div></div>
           <div class="pair"><span class="pair-name">Type</span><div class="chips" id="typeChips"></div></div>
         </div>
-        <p class="muted-note">Starter set is 244 hand-picked everyday words. N5 to N1 add the JLPT vocabulary lists, N5 the easiest. Meanings and word types for JLPT words come from <a href="https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project" target="_blank" rel="noopener">JMdict</a> (EDRDG, CC BY-SA 4.0).</p>
+        <p class="muted-note">Starter set is 244 hand-picked everyday words. N5 to N1 add the JLPT vocabulary lists, N5 the easiest. Meanings and word types for JLPT words come from <a href="https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project" target="_blank" rel="noopener">JMdict</a> (EDRDG, CC BY-SA 4.0), and the Dictionary's example sentences from <a href="https://tatoeba.org" target="_blank" rel="noopener">Tatoeba</a> (CC BY 2.0 FR).</p>
       </div>
 
       <div class="block">
@@ -611,9 +662,23 @@ dialog.tour::backdrop { background: transparent; }
         <div class="chips" id="promptChips"></div>
         <p class="muted-note">Translate from English gives a meaning to put into Japanese, like “I didn't write” + Polite, instead of naming the form.</p>
       </div>
+    </div>
+  </div>
+</dialog>
 
+<!-- Settings (the cog): text size, what the drill shows, and help -->
+<dialog class="modal settings prefs" id="prefsDlg" aria-labelledby="prefsTitle">
+  <div class="modal-head">
+    <h2 id="prefsTitle">Settings <span class="jp" lang="ja">環境設定</span></h2>
+    <span class="settings-note">Changes apply right away.</span>
+    <button type="button" class="btn primary small" id="prefsClose">Done</button>
+  </div>
+  <div class="settings-body">
+    <div class="flow">
       <div class="block">
         <h2><span>Display</span><span class="jp" lang="ja">表示</span></h2>
+        <div class="pair opt-row"><span class="pair-name">Text size</span><div class="chips" id="sizeChips"></div></div>
+        <div class="pair opt-row"><span class="pair-name">Font</span><div class="chips" id="fontChips"></div></div>
         <div class="chips">
           <button class="chip" id="optFuri" aria-pressed="true">Furigana</button>
           <button class="chip" id="optMeaning" aria-pressed="true">Word meaning</button>
@@ -627,7 +692,7 @@ dialog.tour::backdrop { background: transparent; }
       <div class="block">
         <h2><span>Help</span><span class="jp" lang="ja">使い方</span></h2>
         <button type="button" class="btn ghost small" id="tourAgain">Show the tour again</button>
-        <p class="muted-note">A short walk through how a question works, hints, and these settings.</p>
+        <p class="muted-note">A short walk through how a question works, hints, and the settings.</p>
       </div>
     </div>
   </div>
@@ -651,6 +716,15 @@ dialog.tour::backdrop { background: transparent; }
     <div id="cheatVerbs" role="tabpanel" aria-labelledby="tabVerbs"></div>
     <div id="cheatAdjs" role="tabpanel" aria-labelledby="tabAdjs" hidden></div>
   </div>
+</dialog>
+
+<!-- Word card: filled in by openWord() from the feedback's 辞書 Dictionary button -->
+<dialog class="modal word-dlg" id="wordDlg" aria-labelledby="wordTitle">
+  <div class="modal-head">
+    <h2 id="wordTitle">Dictionary <span class="jp" lang="ja">辞書</span></h2>
+    <button type="button" class="btn primary small" id="wordClose">Done</button>
+  </div>
+  <div class="settings-body" id="wordBody"></div>
 </dialog>
 
 <!-- First-visit tour: lights up one part of the page at a time; steps are in TOUR -->
@@ -8742,6 +8816,8 @@ const defaults = () => ({
   levels: ['core'], // word sets (keys of LEVELS); starts on the hand-picked starter words
   filters: { present: true, past: true, aff: true, neg: true, plain: true, polite: true }, // Versions: which of each pair to include
   furigana: true, meaning: true, showType: false, showLevel: true, stats: {}, best: 0, cheatZoom: 100,
+  textSize: 100, // Text size, in percent of the browser's own size
+  font: 'brush', // Japanese font: 'brush', 'print' or 'clean' (see FONT_STYLES)
   seen: {}, // times each word has been asked, so every word gets a turn before any repeats
   prompt: 'form', // 'form' names the grammar form; 'meaning' gives an English phrase to put into Japanese
   srs: {}, // review schedule per pattern (word class + form): { s: stability in days, due, n, last }
@@ -9033,13 +9109,19 @@ function grade(revealed) {
   renderStats();
 }
 
+// Opens the word card (openWord); it only appears once the question is finished, so the sentences can't give the answer away
+const WORD_BTN = '<button type="button" class="btn primary fb-word" aria-haspopup="dialog"><span class="btn-jp" lang="ja">辞書</span>Dictionary</button>';
 // The panel under a finished question: the verdict, the answer, anything else accepted, and the rule
 function feedbackHtml(w, A, ok, firstTry, revealed) {
   const others = A.kanji.slice(1).filter(x => x !== A.kanji[0]); // accepted alternatives besides the textbook answer
   let html = ok
-    ? `<div class="fb-head"><span class="jp" lang="ja">正解</span><strong>${firstTry ? 'Correct' : `Correct on try ${attempts + 1}`}</strong></div>`
-    : `<div class="fb-head miss"><span class="jp" lang="ja">${revealed ? '答え' : '惜しい'}</span><strong>${revealed ? 'The answer' : 'Not quite'}</strong></div>`;
-  if (attempts < 3) html += `<div class="ans-big" lang="ja">${ruby(A.kanji[0], A.kana[0])}</div>`; // from the 3rd miss on, the word above already shows it
+    ? `<div class="fb-head"><span class="jp" lang="ja">正解</span><strong>${firstTry ? 'Correct' : `Correct on try ${attempts + 1}`}</strong>${WORD_BTN}</div>`
+    : `<div class="fb-head miss"><span class="jp" lang="ja">${revealed ? '答え' : '惜しい'}</span><strong>${revealed ? 'The answer' : 'Not quite'}</strong>${WORD_BTN}</div>`;
+  // The answer and what it means in English ("食べました — I ate"). From the 3rd miss on, the word above already shows
+  // the answer, so only the English is added. In Translate mode the question gave the English, so the form is named instead.
+  const en = S.prompt === 'meaning' ? '' : enPhrase(w, cur.f, cur.m);
+  if (attempts < 3) html += `<div class="ans-big" lang="ja">${ruby(A.kanji[0], A.kana[0])}${en ? `<span class="ans-en" lang="en">— ${esc(en)}</span>` : ''}</div>`;
+  else if (en) html += `<div class="ans-en" lang="en">${esc(en)}</div>`;
   if (S.prompt === 'meaning') html += `<div class="also">Form: <span class="form-cell">${qLabel(cur.f, cur.m, w)}</span></div>`; // name the form it was
   if (tried.length) html += triedHtml();
   if (ok && !firstTry) html += `<div class="also">This one will come back in a few questions for review.</div>`;
@@ -9214,6 +9296,14 @@ function renderDisplay() {
   $('#optType').setAttribute('aria-pressed', S.showType);
   $('#optLevel').setAttribute('aria-pressed', S.showLevel);
   $('#optTimer').setAttribute('aria-pressed', !!S.timer);
+  const sc = $('#sizeChips'); sc.innerHTML = '';
+  TEXT_SIZES.forEach(([n, label]) => sc.append(chip(label, S.textSize === n, () => { S.textSize = n; save(); applyTextSize(); renderSettings(); })));
+  const fc = $('#fontChips'); fc.innerHTML = '';
+  FONT_STYLES.forEach(([id, label]) => {
+    const c = chip(label, S.font === id, () => { S.font = id; save(); applyFont(); renderSettings(); });
+    c.insertAdjacentHTML('beforeend', `<span class="font-eg font-${id}" lang="ja" aria-hidden="true">書</span>`); // a sample of each
+    fc.append(c);
+  });
   renderTimer();
   $('#sheet').classList.toggle('no-furigana', !S.furigana);   // the CSS hides furigana / the meaning line from these classes
   $('#sheet').classList.toggle('no-meaning', !S.meaning || english);
@@ -9266,6 +9356,18 @@ $('#presetForm').addEventListener('submit', e => {
   $('#presetName').value = '';
   msg.textContent = at >= 0 ? `Updated “${name}”.` : `Saved “${name}”.`;
 });
+
+// Text size: the root font size, which every rem in the stylesheet follows. The cheat sheet's own slider zooms on top of it.
+const TEXT_SIZES = [[100, 'Standard'], [115, 'Large'], [130, 'Larger'], [150, 'Largest']];
+function applyTextSize() {
+  const root = document.documentElement.style, big = S.textSize > 100;
+  root.fontSize = big ? S.textSize + '%' : '';
+  if (big) root.setProperty('--text-scale', S.textSize / 100); else root.removeProperty('--text-scale');
+}
+
+// Japanese font: set on <html> as data-font, which swaps the font variables at the top of the stylesheet
+const FONT_STYLES = [['brush', 'Brush'], ['print', 'Print'], ['clean', 'Clean']];
+const applyFont = () => { if (S.font === 'brush') delete document.documentElement.dataset.font; else document.documentElement.dataset.font = S.font; };
 
 // Display toggles
 $('#optFuri').addEventListener('click', () => { S.furigana = !S.furigana; save(); renderSettings(); });
@@ -9552,16 +9654,61 @@ $('#settingsBtn').addEventListener('click', openSettings);
 $('#emptySettingsBtn').addEventListener('click', openSettings);
 wireDialog(sdlg, $('#settingsClose'));
 
+// Settings (the cog): text size, display toggles and help, drawn by renderDisplay() with the rest of the settings
+const pdlg = $('#prefsDlg');
+$('#prefsBtn').addEventListener('click', () => pdlg.showModal());
+wireDialog(pdlg, $('#prefsClose'));
+
 // Score dialog
 const scoreDlg = $('#scoreDlg');
 // renderStats() keeps the scores current after every answer; the study time is filled in on open and ticks while open
 $('#scoreBtn').addEventListener('click', () => { renderStudyTime(); scoreDlg.showModal(); });
 wireDialog(scoreDlg, $('#scoreClose'));
 
+// ---------- Word card ----------
+// 辞書 Dictionary, after an answer: the word's type and meanings, two example sentences from Tatoeba, and a link to
+// Jisho for the rest. make_examples.py splits the sentences over EX_SHARDS files in examples/, and only the file
+// holding this word is fetched, once.
+const wordDlg = $('#wordDlg'), EX_SHARDS = 64, exFiles = new Map();
+// Which file a word is in: a djb2 hash of "kanji|reading", the same as shard() in make_examples.py
+const exShard = key => { let h = 5381; for (const ch of key) h = (h * 33 + ch.codePointAt(0)) >>> 0; return h % EX_SHARDS; };
+function examplesFor(w) {
+  const key = `${w.k}|${w.r}`, n = String(exShard(key)).padStart(2, '0');
+  if (!exFiles.has(n)) exFiles.set(n, fetch(`examples/${n}.json`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .catch(e => { exFiles.delete(n); throw e; }));           // a failed load is tried again next time
+  return exFiles.get(n).then(d => d[key] || []);
+}
+// A sentence as HTML: {漢字|かんじ} is furigana (shown when Furigana is on), [ … ] the word itself
+const exampleHtml = s => esc(s)
+  .replace(/\{([^|}]*)\|([^}]*)\}/g, (_, base, rt) => S.furigana ? `<ruby>${base}<rt>${rt}</rt></ruby>` : base)
+  .replace('[', '<mark>').replace(']', '</mark>');
+let wordOpens = 0; // counts openings, so sentences that load slowly don't land in a card opened since
+function openWord() {
+  const w = WORDS[cur.w], n = ++wordOpens;
+  const tags = [tagFor(w), w.lv && 'JLPT N' + w.lv].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join('');
+  $('#wordBody').innerHTML = `
+    <div class="wd-head"><p class="wd-word" lang="ja">${esc(w.k)}</p>${w.k !== w.r ? `<span class="wd-kana" lang="ja">${esc(w.r)}</span>` : ''}</div>
+    <div class="wd-tags">${tags}</div>
+    <p class="wd-mean">${esc(w.m)}</p>
+    <section class="wd-ex"><h3><span lang="ja">例文</span>Example sentences</h3><div id="wdEx"><p class="muted-note">Loading…</p></div></section>
+    <div class="wd-more">
+      <a class="btn ghost small" href="https://jisho.org/search/${encodeURIComponent(w.k)}" target="_blank" rel="noopener">More on Jisho.org ↗</a>
+      <p class="muted-note">Sentences from <a href="https://tatoeba.org" target="_blank" rel="noopener">Tatoeba</a>, CC BY 2.0 FR</p>
+    </div>`;
+  wordDlg.showModal();
+  examplesFor(w).then(list => list.length
+    ? `<ul class="wd-list">${list.map(([jp, en]) => `<li><p class="wd-jp" lang="ja">${exampleHtml(jp)}</p><p class="wd-en">${esc(en)}</p></li>`).join('')}</ul>`
+    : '<p class="muted-note">No example sentences for this word yet. Jisho may have some.</p>',
+    () => `<p class="muted-note">Couldn't load the example sentences. Check your connection and try again.</p>`)
+    .then(html => { if (n === wordOpens) $('#wdEx').innerHTML = html; });
+}
+$('#feedback').addEventListener('click', e => { if (e.target.closest('.fb-word')) openWord(); });
+wireDialog(wordDlg, $('#wordClose'));
+
 // ---------- Tour ----------
 // Shown once on a first visit, and again from Study settings. Each step lights up one part of the page and explains it.
 const TOUR = [
-  { at: () => $('.prompt'), title: 'Change the word', jp: '問題', text: () => `
+  { at: () => $('.prompt'), title: 'Conjugate the word', jp: '問題', text: () => `
     <p>Each question gives you a word and a form. Write the word in that form.</p>
     ${tourExample()}
     <p>Each colored tag is one part of the form.</p>` },
@@ -9569,14 +9716,34 @@ const TOUR = [
     <p>Type in romaji and it turns into kana as you go: <i>kakimashita</i> becomes <span class="k" lang="ja">かきました</span>. A Japanese keyboard works too.</p>
     <p>Press <kbd>Enter</kbd> to check, and <kbd>Enter</kbd> again for the next word.</p>` },
   { at: () => $('#answerForm .actions'), title: 'Stuck? Keep going', jp: 'ヒント', text: `
-    <p>A wrong answer unlocks a hint: first the word type, then the rule. Try again as often as you like, or press <b>Show answer</b>.</p>
-    <p>The <b>Cheat sheet</b> has every rule, with this question's row marked.</p>` },
+    <p>A wrong answer unlocks a hint: first the word type, then the rule. Try again as often as you like, or press <b>Show answer</b>.</p>` },
+  // Dictionary only appears once a question is over, so while this step is up, tourDemo puts a finished one's panel on the page
+  { at: () => [$('#cheatBtn'), $('#feedback .fb-word')], when: () => !!cur, show: tourDemo, title: 'Got one wrong?', jp: '調べる', text: `
+    <p><b>Cheat sheet</b> has every rule, with this question's row marked. It's there the whole time.</p>
+    <p>When the question is over, <b>Dictionary</b> shows the word's meanings and example sentences.</p>` },
   { at: () => $('.head-nav'), title: 'Choose what to practice', jp: '設定', text: `
     <p><b>Study settings</b> picks the forms and the words: the starter set, or the JLPT N5 to N1 lists.</p>
-    <p><b>Score</b> shows how you're doing on each form. Rules you miss come back sooner. Everything is saved in this browser.</p>` },
+    <p><b>Score</b> shows how you're doing on each form. Rules you miss come back sooner. Everything is saved in this browser.</p>
+    <p>The <b>cog</b> has the text size and font, what each question shows, and this tour.</p>` },
 ];
 const tour = $('#tour'), tourSpot = $('#tourSpot'), tourCard = $('#tourCard');
-let tourSteps = [], tourAt = 0;
+let tourSteps = [], tourAt = 0, tourUndo = null; // tourUndo takes away the current step's sample panel, if it put one up
+// The Cheat sheet / Dictionary step's sample: the top of the panel a question shows once it's over, after a miss, with
+// its Dictionary button (and no answer, so nothing is given away). Returns how to take it away again.
+function tourDemo() {
+  if (answered) return null;                                   // a finished question already shows the real panel
+  const fb = $('#feedback');
+  fb.innerHTML = `<div class="fb-head"><span class="jp" lang="ja">正解</span><strong>Correct on try 2</strong>${WORD_BTN}</div>`;
+  fb.hidden = false;
+  return () => { fb.hidden = true; fb.innerHTML = ''; };
+}
+const undoTourDemo = () => { if (tourUndo) { tourUndo(); tourUndo = null; } };
+// The part of the page a step lights up: one element, or the box around several
+function tourRect(s) {
+  const rs = [].concat(s.at()).map(e => e.getBoundingClientRect());
+  const top = Math.min(...rs.map(r => r.top)), left = Math.min(...rs.map(r => r.left));
+  return { top, left, width: Math.max(...rs.map(r => r.right)) - left, height: Math.max(...rs.map(r => r.bottom)) - top };
+}
 // The worked example in step 1: the word on screen in its polite past (or plain negative past when that's the
 // question), so it matches the word without giving the answer away
 function tourExample() {
@@ -9589,7 +9756,7 @@ function tourExample() {
 }
 // Light up the step's part of the page and put the card below it, or above when there's no room below
 function placeTour() {
-  const r = tourSteps[tourAt].at().getBoundingClientRect(), pad = 8, gap = 12;
+  const r = tourRect(tourSteps[tourAt]), pad = 8, gap = 12;
   const top = r.top - pad, left = r.left - pad, w = r.width + pad * 2, h = r.height + pad * 2;
   Object.assign(tourSpot.style, { top: top + 'px', left: left + 'px', width: w + 'px', height: h + 'px' });
   const vw = document.documentElement.clientWidth, vh = innerHeight, cw = tourCard.offsetWidth, ch = tourCard.offsetHeight;
@@ -9600,26 +9767,30 @@ function placeTour() {
   Object.assign(tourCard.style, { top: y + 'px', left: x + 'px' });
 }
 function showTourStep(i) {
+  undoTourDemo();
   tourAt = i;
   const s = tourSteps[i], last = i === tourSteps.length - 1;
+  if (s.show) tourUndo = s.show();
   $('#tourStep').textContent = `${i + 1} of ${tourSteps.length}`;
   $('#tourTitle').innerHTML = `<span>${s.title}</span><span class="jp" lang="ja">${s.jp}</span>`;
   $('#tourText').innerHTML = typeof s.text === 'function' ? s.text() : s.text;
   $('#tourBack').hidden = i === 0;
   $('#tourNext').textContent = last ? 'Start practicing' : 'Next';
   // Scroll so the part and the card under it fit on screen together, or else so the part is centered
-  const r = s.at().getBoundingClientRect(), need = r.height + 28 + tourCard.offsetHeight;
+  const r = tourRect(s), need = r.height + 28 + tourCard.offsetHeight;
   const offset = need <= innerHeight - 32 ? (innerHeight - need) / 2 : (innerHeight - r.height) / 2;
   scrollTo({ top: Math.max(0, scrollY + r.top - offset) });
   placeTour();
   $('#tourNext').focus();
 }
 function startTour() {
-  tourSteps = TOUR.filter(s => s.at()?.getClientRects().length); // only parts that are showing (no drill: just the settings step)
+  // only parts that are showing (no drill: just the settings step); a step with a sample says itself when it fits
+  tourSteps = TOUR.filter(s => s.when ? s.when() : s.at()?.getClientRects().length);
   if (!tourSteps.length) return;
   tour.showModal(); showTourStep(0);
 }
 function endTour() {
+  undoTourDemo();
   if (tour.open) tour.close();
   S.seenTour = true; save();
 }
@@ -9631,7 +9802,7 @@ tour.addEventListener('close', () => { if (cur) input.focus(); });
 // Keep the spot on its target when the page scrolls, resizes, or reflows as the fonts load
 addEventListener('scroll', () => { if (tour.open) placeTour(); }, { passive: true });
 new ResizeObserver(() => { if (tour.open) placeTour(); }).observe(document.body);
-$('#tourAgain').addEventListener('click', () => { sdlg.close(); startTour(); });
+$('#tourAgain').addEventListener('click', () => { pdlg.close(); startTour(); });
 
 // ---------- Study timer ----------
 // Counts active study time. The clock runs while you're doing something on the page and stops IDLE_CAP after your
@@ -9700,6 +9871,8 @@ setInterval(() => {
 // Start up: hide the tip for returning visitors, draw the settings and scores, then ask the first question.
 // A first visit opens with the tour.
 $('#intro').hidden = !!S.seenIntro;
-renderSettings(); renderStats(); renderReset(false); next();
+if (!TEXT_SIZES.some(([n]) => n === S.textSize)) S.textSize = 100; // a size no longer offered goes back to Standard
+if (!FONT_STYLES.some(([id]) => id === S.font)) S.font = 'brush';
+applyTextSize(); applyFont(); renderSettings(); renderStats(); renderReset(false); next();
 if (!S.seenTour) startTour();
 </script>

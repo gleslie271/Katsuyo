@@ -11,6 +11,7 @@ Needs:  pip install fonttools brotli
 """
 import base64
 import io
+import json
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -20,19 +21,22 @@ from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent
 SRC, OUT, FONTS, WEBFONTS = ROOT / 'katsuyo.html', ROOT / 'index.html', ROOT / 'fonts', ROOT / 'webfonts'
+EXAMPLES = ROOT / 'examples'
 JLPT_START, JLPT_END = '// ---------- JLPT words (generated', '// ---------- end of JLPT words ----------'
 SLICE = 100  # kanji per downloadable font file
 
-# (CSS family, weight, source file, shows JLPT words) for every weight the page's CSS asks for. Only the brush font
-# (the big word) and the regular mincho (answers, hints, rules) ever show a JLPT word; the rest show fixed text.
+# (CSS family, weight, source file, shows JLPT words, shows example sentences) for every weight the page's CSS asks
+# for. Only the brush font (the big word) and the regular mincho (answers, hints, rules, sentences) show JLPT words
+# and example sentences, or the regular gothic in their place when the Japanese font setting is Clean; the rest show
+# fixed text.
 FACES = [
-    ('Shippori Mincho', 400, 'ShipporiMincho-Regular.ttf', True),
-    ('Shippori Mincho', 600, 'ShipporiMincho-SemiBold.ttf', False),
-    ('Shippori Mincho', 800, 'ShipporiMincho-ExtraBold.ttf', False),
-    ('Yuji Syuku', 400, 'YujiSyuku-Regular.ttf', True),
-    ('Zen Kaku Gothic New', 400, 'ZenKakuGothicNew-Regular.ttf', False),
-    ('Zen Kaku Gothic New', 500, 'ZenKakuGothicNew-Medium.ttf', False),
-    ('Zen Kaku Gothic New', 700, 'ZenKakuGothicNew-Bold.ttf', False),
+    ('Shippori Mincho', 400, 'ShipporiMincho-Regular.ttf', True, True),
+    ('Shippori Mincho', 600, 'ShipporiMincho-SemiBold.ttf', False, False),
+    ('Shippori Mincho', 800, 'ShipporiMincho-ExtraBold.ttf', False, False),
+    ('Yuji Syuku', 400, 'YujiSyuku-Regular.ttf', True, False),
+    ('Zen Kaku Gothic New', 400, 'ZenKakuGothicNew-Regular.ttf', True, True),
+    ('Zen Kaku Gothic New', 500, 'ZenKakuGothicNew-Medium.ttf', False, False),
+    ('Zen Kaku Gothic New', 700, 'ZenKakuGothicNew-Bold.ttf', False, False),
 ]
 
 DESCRIPTION = 'Drill Japanese verb and adjective conjugations with hints, spaced review and a cheat sheet.'
@@ -92,19 +96,24 @@ def main():
     # The JLPT words' extra characters, in the order the words appear (N5 first), so each slice tends to cover one level
     extra = ''.join(dict.fromkeys(c for c in html[a:b] if c not in base and c >= ' '))
     slices = [extra[i:i + SLICE] for i in range(0, len(extra), SLICE)]
+    # The example sentences' characters beyond those (furigana and markup aside), in their own slices after the words'
+    said = ''.join(re.sub(r'\|[^}]*\}|[{}\[\]]', '', jp) for f in sorted(EXAMPLES.glob('*.json'))
+                   for ex in json.loads(f.read_text(encoding='utf-8')).values() for jp, _en in ex)
+    more = ''.join(dict.fromkeys(c for c in said if c not in base and c not in extra and c >= ' '))
+    ex_slices = [more[i:i + SLICE] for i in range(0, len(more), SLICE)]
 
     WEBFONTS.mkdir(exist_ok=True)
     for old in WEBFONTS.glob('*.woff2'):
         old.unlink()
     faces, sliced = [], 0
-    for family, weight, file, vocab in FACES:
+    for family, weight, file, vocab, sentences in FACES:
         data = subset_woff2(FONTS / file, base)
         print(f'{file}: {(FONTS / file).stat().st_size // 1024:,} KB -> {len(data) // 1024:,} KB embedded')
         url = f"url(data:font/woff2;base64,{base64.b64encode(data).decode()})"
         faces.append(face(family, weight, url, base if vocab else None))
         if vocab:
             slug = f"{family.lower().replace(' ', '-')}-{weight}"
-            for i, chars in enumerate(slices):
+            for i, chars in enumerate(slices + (ex_slices if sentences else [])):
                 part = subset_woff2(FONTS / file, chars)
                 (WEBFONTS / f'{slug}-{i:02}.woff2').write_bytes(part)
                 faces.append(face(family, weight, f"url(webfonts/{slug}-{i:02}.woff2)", chars))
@@ -127,8 +136,8 @@ def main():
     OUT.write_text(out, encoding='utf-8')
 
     outside = re.findall(r'<(?:link|script|img)\b[^>]*\b(?:src|href)="(https?://[^"]+)"', out)  # loads, not ordinary links
-    print(f'webfonts/: {len(slices)} slices x 2 fonts, {sliced // 1024:,} KB, loaded only as needed')
-    print(f'index.html: {len(out.encode()) // 1024:,} KB, {len(base):,} characters embedded, {len(extra):,} in slices'
+    print(f'webfonts/: {len(slices)} slices x 3 fonts + {len(ex_slices)} x 2 for the example sentences, {sliced // 1024:,} KB, loaded only as needed')
+    print(f'index.html: {len(out.encode()) // 1024:,} KB, {len(base):,} characters embedded, {len(extra) + len(more):,} in slices'
           + (f', still loads: {outside}' if outside else ', no outside requests'))
 
 
