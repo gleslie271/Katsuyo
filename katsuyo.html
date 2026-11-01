@@ -8424,19 +8424,35 @@ function ruby(k, r) {
 // A word's conjugated form f, with furigana
 const formRuby = (w, f) => ruby(table(w.k, w)[f][0], table(w.r, w)[f][0]);
 
-// Split a form name into colored tags so politeness, tense and polarity read at a glance: "Polite past negative"
-// becomes three tags; a name with none of those words ("Potential") stays one neutral tag.
+// A form name becomes colored tags so politeness, tense and polarity read at a glance: "Polite past negative" is
+// three tags; a name with none of those words ("Potential") stays one neutral tag that the variant tags follow.
 const SEG = { polite: 'polite', past: 'past', negative: 'neg' };  // word → tag color class
-const formLabel = label => {
-  const words = label.split(' ');
-  if (!words.some(x => SEG[x.toLowerCase()])) return `<span class="seg">${esc(label)}</span>`;
-  return words.map(x => `<span class="seg ${SEG[x.toLowerCase()] || ''}">${esc(x[0].toUpperCase() + x.slice(1))}</span>`).join('');
-};
-
-// A question's form as colored tags, its Japanese name, and a plain-text name; m adds negative / past / polite
-const qLabel = (f, m) => formLabel(FORMS[f][0]) + (m ? modWords(m).map(x => `<span class="seg ${SEG[x.toLowerCase()]}">${x}</span>`).join('') : '');
+// The tags go in the order their parts appear in the answer itself. Verbs add ます straight after the stem and
+// the past last (書き·ませ·ん·でした, 書か·なかっ·た); adjectives and たい add です at the very end
+// (高く·なかっ·た·です, 書きたく·なかっ·た·です); な-adjectives and nouns fold polite and past into でした (静か·でし·た).
+const VERB_ORDER = ['plain', 'polite', 'present', 'negative', 'past'];
+const ADJ_ORDER = ['plain', 'present', 'negative', 'past', 'polite'];
+function partOrder(f, w) {
+  if (f === 'aPolPast' && w && (w.c === 'naadj' || w.c === 'noun')) return ['polite', 'past'];
+  return VERB_FORMS.includes(f) && f !== 'tai' ? VERB_ORDER : ADJ_ORDER;
+}
+// A question's tags in answer order: pot~Pnp → ['Potential', 'Polite', 'Negative', 'Past']. Without a word
+// (the cheat sheet, Score), adjective forms follow い-adjectives.
+function qParts(f, m = '', w = null) {
+  const name = FORMS[f][0], words = name.split(' ');
+  const split = words.some(x => SEG[x.toLowerCase()]);           // "Polite past" splits; "Want to" stays whole
+  const order = partOrder(f, w), known = x => order.includes(x.toLowerCase());
+  const all = [...(split ? words : []), ...(m ? modWords(m) : [])].map(x => x[0].toUpperCase() + x.slice(1));
+  // Reorder only the polite / tense / polarity tags; other words keep their place ("Polite · Volitional": 読み·ましょう)
+  const sorted = all.filter(known).sort((a, b) => order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase()));
+  let i = 0;
+  const parts = all.map(x => known(x) ? sorted[i++] : x);
+  return split ? parts : [name, ...parts];
+}
+// The same as colored tags, as Japanese grammar terms (kept in their usual order), and as plain text for sentences
+const qLabel = (f, m, w) => qParts(f, m, w).map(x => `<span class="seg ${SEG[x.toLowerCase()] || ''}">${esc(x)}</span>`).join('');
 const qJp = (f, m) => [FORMS[f][1], ...(m ? modWords(m).map(x => ({ Polite: '丁寧', Past: '過去', Negative: '否定' })[x]) : [])].join('・');
-const qName = (f, m) => FORMS[f][0] + (m ? ' ' + modWords(m).join(' ').toLowerCase() : '');
+const qName = (f, m, w) => qParts(f, m, w).map((x, i) => i && VERB_ORDER.includes(x.toLowerCase()) ? x.toLowerCase() : x).join(' ');
 
 // The rule for a form plus whatever variant sits on top of it: the form's own rule, then one sentence for the variant
 function ruleForQ(w, f, m, withTypeNote = true) {
@@ -8574,7 +8590,7 @@ function enPrompt(w, f, m = '') {
 function diagnose(w, f, m, given) {
   const hit = list => list && list.some(a => norm(a) === given);                          // does given match any answer in list?
   const both = (ww, g, mm) => hit(answers(w.r, ww, g, mm)) || hit(answers(w.k, ww, g, mm)); // …in kana or kanji spelling
-  const name = (g, mm) => `<b>${qName(g, mm)}</b>`;
+  const name = (g, mm) => `<b>${qName(g, mm, w)}</b>`;
   // Another real form of this word, including this form with a different negative / past / polite
   for (const g of Object.keys(table(w.r, w))) {
     for (const mm of ['', ...allMods(g)]) {
@@ -8872,7 +8888,7 @@ function renderPrompt() {
   if (!cur) return;
   const english = S.prompt === 'meaning';                     // Translate from English mode
   $('#targetLbl').textContent = english ? 'Say in Japanese' : 'Convert to';
-  $('#formEn').innerHTML = english ? enPrompt(WORDS[cur.w], cur.f, cur.m) : qLabel(cur.f, cur.m);
+  $('#formEn').innerHTML = english ? enPrompt(WORDS[cur.w], cur.f, cur.m) : qLabel(cur.f, cur.m, WORDS[cur.w]);
   $('#formJp').textContent = english ? '' : qJp(cur.f, cur.m);
 }
 
@@ -8951,7 +8967,7 @@ function feedbackHtml(w, A, ok, firstTry, revealed) {
     ? `<div class="fb-head"><span class="jp" lang="ja">正解</span><strong>${firstTry ? 'Correct' : `Correct on try ${attempts + 1}`}</strong></div>`
     : `<div class="fb-head miss"><span class="jp" lang="ja">${revealed ? '答え' : '惜しい'}</span><strong>${revealed ? 'The answer' : 'Not quite'}</strong></div>`;
   if (attempts < 3) html += `<div class="ans-big" lang="ja">${ruby(A.kanji[0], A.kana[0])}</div>`; // from the 3rd miss on, the word above already shows it
-  if (S.prompt === 'meaning') html += `<div class="also">Form: <span class="form-cell">${qLabel(cur.f, cur.m)}</span></div>`; // name the form it was
+  if (S.prompt === 'meaning') html += `<div class="also">Form: <span class="form-cell">${qLabel(cur.f, cur.m, w)}</span></div>`; // name the form it was
   if (tried.length) html += triedHtml();
   if (ok && !firstTry) html += `<div class="also">This one will come back in a few questions for review.</div>`;
   if (others.length) html += `<div class="also">Also accepted: ${others.map(o => `<span lang="ja">${esc(o)}</span>`).join('、 ')}</div>`;
@@ -9281,7 +9297,7 @@ const FORM_INFO = {
 function formInfo(f) {
   const w = WORDS.find(x => x.k === (VERB_FORMS.includes(f) ? '書く' : '高い'));
   const [what, en] = FORM_INFO[f];
-  return `<div class="fi-head"><span class="form-cell">${formLabel(FORMS[f][0])}</span><span class="form-jp" lang="ja">${FORMS[f][1]}</span></div>` +
+  return `<div class="fi-head"><span class="form-cell">${qLabel(f)}</span><span class="form-jp" lang="ja">${FORMS[f][1]}</span></div>` +
     `<p>${what}</p><p class="fi-eg"><span class="ex" lang="ja">${formRuby(w, f)}</span><span class="muted">${esc(en)}</span></p>`;
 }
 
@@ -9289,7 +9305,7 @@ function formInfo(f) {
 // box, opened on the form being asked when it's on this tab
 function formLegend(ids) {
   const sel = cur && ids.includes(cur.f) ? cur.f : ids[0];
-  const btns = ids.map(f => `<button type="button" class="form-btn" data-f="${f}" aria-pressed="${f === sel}"><span class="form-cell">${formLabel(FORMS[f][0])}</span></button>`).join('');
+  const btns = ids.map(f => `<button type="button" class="form-btn" data-f="${f}" aria-pressed="${f === sel}"><span class="form-cell">${qLabel(f)}</span></button>`).join('');
   return `<section class="legend"><h3>What the forms mean</h3>` +
     `<p class="key"><span><span class="seg polite">Polite</span> です / ます speech, for people you don't know well</span>` +
     `<span><span class="seg">Plain</span> casual speech, also used inside longer sentences</span>` +
@@ -9310,7 +9326,7 @@ function cheatTable(groups, cols, patterns, curCol) {
   for (const [name, ids] of groups) {
     body += `<tr class="grp"><th colspan="${cols.length + 1}">${name}</th></tr>`;
     for (const f of ids) {
-      body += `<tr class="${cur && cur.f === f ? 'now' : ''}"><th scope="row"><span class="form-cell">${formLabel(FORMS[f][0])}</span></th>` +
+      body += `<tr class="${cur && cur.f === f ? 'now' : ''}"><th scope="row"><span class="form-cell">${qLabel(f)}</span></th>` +
         cols.map((c, j) => `<td class="${j === curCol ? 'hl' : ''}">${!fits(c.w, f) ? '—'
           : (c.pat != null ? `<span class="pat">${patterns[f][c.pat]}</span>` : '') + exForm(c.w, f)}</td>`).join('') +
         '</tr>';
