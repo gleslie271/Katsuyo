@@ -1,0 +1,3 @@
+# The full font files are only needed to run build.py (about 40 MB); index.html embeds the subset it needs
+fonts/*.ttf
+__pycache__/

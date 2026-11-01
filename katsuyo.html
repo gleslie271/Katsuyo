@@ -1,0 +1,2169 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Katsuyō Conjugation Drill</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Katsuyō stylesheet
+   Layout: the drill fills the page with session stats below it; Score, Study settings and the cheat sheet open as dialogs.
+   Look: washi paper and sumi ink. Brush-script word, mincho for Japanese, a vermilion seal, square ink-ruled panels. */
+
+/* ---------- Theme tokens ---------- */
+:root {
+  --paper: #F1ECE1;      /* washi page background */
+  --sheet: #FBF8F1;      /* the lighter sheet panels sit on */
+  --ink: #1E1B18;        /* sumi: main text */
+  --muted: #6B6358;      /* secondary text */
+  --rule: #D6CBB6;       /* borders */
+  --rule-soft: #E2D7C2;  /* fainter inner lines */
+  --fiber: rgba(140, 118, 84, .10); /* washi fiber specks */
+  --ai: #1E1B18;         /* primary actions and selections are inked */
+  --on-ai: #F7F1E6;      /* text on an inked button */
+  --ai-soft: #ECE5D7;    /* soft highlight: hint cards, the current row in the cheat sheet */
+  --shu: #B8322A;        /* vermilion seal: stamp, wrong tries, delete */
+  --shu-soft: #F4E2DC;
+  --chip: #E9E2D3;       /* inactive fills: tabs, mini labels, score bar track */
+  /* form-label parts: politeness (indigo), tense (old gold), polarity (vermilion) */
+  --polite: #2E4A7A; --past: #8A6424; --neg: #B8322A;
+  /* score bar: first try, 1 hint, 2 hints, answer shown */
+  --s-ok: #4E7A3A; --s-h1: #C9A227; --s-h2: #D3792C; --s-x: #B8322A;
+
+  --f-hand: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;                  /* Japanese text */
+  --f-brush: "Yuji Syuku", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;   /* the big brush word */
+  --f-ui: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;       /* everything else */
+
+  --t-xs: .75rem; --t-sm: .875rem; --t-md: 1rem; --t-lg: 1.25rem; --t-xl: 2rem;            /* type scale */
+}
+/* Sumi night: dark paper, warm off-white ink. Follows the system setting unless the viewer picked light */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #16130F; --sheet: #1E1A15; --ink: #EDE6D6; --muted: #A89E8C; --rule: #3B342A; --rule-soft: #2E2821;
+    --fiber: rgba(237, 230, 214, .045); --ai: #EDE6D6; --on-ai: #16130F; --ai-soft: #29241D;
+    --shu: #E2654F; --shu-soft: #3A211B; --chip: #29241D;
+    --polite: #93B4E3; --past: #D9A85A; --neg: #EE7A62;
+    --s-ok: #7FB069; --s-h1: #E3C14E; --s-h2: #F09A4E; --s-x: #EE7A62;
+    color-scheme: dark;
+  }
+}
+/* The same dark palette when the viewer picked dark explicitly */
+:root[data-theme="dark"] {
+  --paper: #16130F; --sheet: #1E1A15; --ink: #EDE6D6; --muted: #A89E8C; --rule: #3B342A; --rule-soft: #2E2821;
+  --fiber: rgba(237, 230, 214, .045); --ai: #EDE6D6; --on-ai: #16130F; --ai-soft: #29241D;
+  --shu: #E2654F; --shu-soft: #3A211B; --chip: #29241D;
+  --polite: #93B4E3; --past: #D9A85A; --neg: #EE7A62;
+  --s-ok: #7FB069; --s-h1: #E3C14E; --s-h2: #F09A4E; --s-x: #EE7A62;
+  color-scheme: dark;
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; } /* beats display rules like .empty's grid */
+:root { color-scheme: light; }
+body {
+  margin: 0; color: var(--ink); font-family: var(--f-ui); font-size: var(--t-md); line-height: 1.55;
+  /* washi: two offset layers of faint fibers */
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--fiber) 1px, transparent 1.5px), radial-gradient(var(--fiber) 1px, transparent 1.5px);
+  background-size: 23px 19px, 37px 31px; background-position: 0 0, 11px 7px;
+  /* at least 16px at the sides, more under a phone's notch */
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
+kbd { font-family: var(--f-ui); font-size: .85em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--paper); }
+
+/* ---------- Page and header ---------- */
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 24px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px; }
+
+header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+/* The red 活用 seal, set vertically and tilted like a stamped chop */
+.seal {
+  width: 50px; height: 50px; flex: none; background: var(--shu); color: #F7F1E6; border-radius: 4px;
+  display: grid; place-items: center; transform: rotate(-3deg);
+  font-family: var(--f-hand); font-weight: 800; font-size: 17px; line-height: 1; writing-mode: vertical-rl; letter-spacing: .08em;
+}
+.brand h1 { margin: 0; font-family: var(--f-hand); font-weight: 800; font-size: 1.75rem; line-height: 1.1; letter-spacing: .04em; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: var(--t-sm); }
+/* Score and Study settings sit at the right and wrap together on phones */
+.head-nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 22px; }
+/* Header actions read as inked links rather than boxed buttons */
+.btn.head-btn { display: inline-flex; align-items: baseline; gap: 8px; background: none; border: 0; border-bottom: 1px solid var(--ink); padding: 8px 0 4px; min-height: 44px; }
+.btn.head-btn:hover { background: none; color: var(--shu); border-bottom-color: var(--shu); }
+.settings-sum { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; } /* the form count beside Study settings */
+
+/* ---------- The drill sheet ---------- */
+/* A square panel with a fine inner rule, like a mounted scroll; the form's Japanese name runs down beside it */
+.drill-row { display: flex; align-items: stretch; }
+.drill-row .sheet { flex: 1 1 auto; min-width: 0; }
+.form-strip {
+  flex: none; width: 64px; padding: 30px 0; display: flex; justify-content: center;
+  writing-mode: vertical-rl; font-family: var(--f-hand); font-weight: 600; font-size: 1.35rem; letter-spacing: .5em; color: var(--shu);
+}
+/* Narrow screens: the form name moves under the sheet and reads across */
+@media (max-width: 720px) {
+  .drill-row { flex-direction: column; }
+  .form-strip { width: auto; padding: 10px 0 0; writing-mode: horizontal-tb; font-size: 1rem; letter-spacing: .3em; }
+}
+.sheet { background: var(--sheet); border: 1px solid var(--rule); box-shadow: inset 0 0 0 7px var(--sheet), inset 0 0 0 8px var(--rule-soft); overflow: hidden; }
+/* Top line: word-type tag and "retry" tag on the left; study timer (when on) and question number on the right */
+.sheet-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 22px 32px 0; font-size: var(--t-sm); color: var(--muted); }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag { border: 1px solid var(--rule); color: var(--muted); padding: 2px 12px; font-size: var(--t-xs); font-weight: 500; letter-spacing: .06em; }
+.tag.retry { border-color: var(--shu); background: var(--shu-soft); color: var(--shu); }
+.sheet-meta { margin-left: auto; display: flex; align-items: baseline; gap: 18px; } /* stays right even when it wraps under the tags */
+.qno { font-family: var(--f-hand); font-size: var(--t-md); font-variant-numeric: tabular-nums; letter-spacing: .1em; white-space: nowrap; }
+.timer { font-family: var(--f-hand); font-size: var(--t-md); font-variant-numeric: tabular-nums; letter-spacing: .06em; white-space: nowrap; transition: opacity .3s; }
+.timer [lang="ja"] { font-size: var(--t-sm); margin-right: .4em; }
+.timer.paused { opacity: .45; } /* faded while you're away and the clock isn't running */
+
+/* The word to conjugate, its meaning, and the target form */
+.prompt { padding: 20px 22px 28px; text-align: center; border-bottom: 1px solid var(--rule-soft); margin: 0 8px; }
+.word { font-family: var(--f-brush); font-weight: 400; font-size: clamp(3.4rem, 12vw, 8.25rem); line-height: 1.15; margin: 0; overflow-wrap: anywhere; }
+.word rt { font-size: .22em; color: var(--muted); font-family: var(--f-ui); letter-spacing: .3em; }
+.no-furigana .word rt { visibility: hidden; } /* hidden, not removed, so the word doesn't jump */
+.word .chg, .word rt.chg { color: var(--shu); } /* after a third miss: the parts that changed */
+.meaning { color: var(--muted); margin-top: 6px; font-size: var(--t-sm); letter-spacing: .2em; text-transform: uppercase; }
+.no-meaning .meaning { display: none; }
+/* a single ink stroke under the word */
+.brush { width: 120px; height: 3px; border-radius: 2px; background: var(--ink); opacity: .75; margin: 16px auto 0; }
+/* "へ Polite Past Negative": each part of the form in its own color */
+.target { margin-top: 22px; display: inline-flex; align-items: baseline; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.target .arrow { color: var(--muted); font-family: var(--f-hand); font-size: var(--t-lg); }
+.form-en { font-weight: 500; font-size: 1.05rem; display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.en-target { font-weight: 700; font-size: var(--t-lg); } /* the English phrase in Translate mode */
+.seg { padding: 3px 12px; border: 1px solid var(--rule); background: transparent; color: var(--ink); }
+.seg.polite { border-color: var(--polite); color: var(--polite); }
+.seg.past { border-color: var(--past); color: var(--past); }
+.seg.neg { border-color: var(--neg); color: var(--neg); }
+.form-jp { color: var(--muted); font-size: var(--t-sm); font-family: var(--f-hand); }
+
+/* 正解 stamp, pressed onto the word like a teacher's hanko */
+.word-wrap { position: relative; }
+.stamp {
+  position: absolute; left: 50%; top: 50%; width: 170px; height: 170px; margin: -85px 0 0 -85px;
+  pointer-events: none; opacity: .95; transform: rotate(-12deg);
+}
+.stamp svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.stamp .disc { fill: var(--sheet); fill-opacity: .9; stroke: var(--shu); } /* mostly opaque so 正解 reads over the word */
+.stamp .ring { fill: none; stroke: var(--shu); }
+.stamp text { fill: var(--shu); font-family: var(--f-hand); font-weight: 800; text-anchor: middle; }
+.stamp.go { animation: stamp .46s cubic-bezier(.3, .6, .35, 1.15) both; }
+@keyframes stamp {
+  0% { opacity: 0; transform: scale(2.4) rotate(-28deg); }   /* starts big, in the air */
+  55% { opacity: 1; transform: scale(.92) rotate(-12deg); }  /* presses slightly past */
+  100% { opacity: .95; transform: scale(1) rotate(-12deg); } /* and settles */
+}
+.prompt.thud { animation: thud .22s .24s ease-out; } /* the word dips as the stamp lands */
+@keyframes thud { 40% { transform: translateY(3px); } }
+
+/* ---------- Answer box and buttons ---------- */
+.answer { padding: 26px 32px 8px; display: grid; gap: 16px; }
+.line { position: relative; }
+.answer label { display: block; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: 6px; }
+.answer label [lang="ja"], .btn-jp { font-family: var(--f-hand); font-weight: 600; margin-right: .45em; letter-spacing: .04em; }
+/* Genkō yōshi: one square per kana. Each glyph is 1em wide plus .75em spacing, so cells are 1.75em and scale together */
+#answer {
+  width: 100%; height: calc(1.75em + 2px); border: 1px solid var(--rule); border-radius: 0; color: var(--ink);
+  font-family: var(--f-hand); font-size: clamp(20px, 3.4vw, 32px); letter-spacing: .75em; padding: 0 0 0 .375em;
+  background-color: var(--sheet);
+  background-image: repeating-linear-gradient(90deg, transparent 0 calc(1.75em - 1px), var(--rule-soft) calc(1.75em - 1px) 1.75em);
+}
+#answer:focus { outline: 2px solid var(--ai); outline-offset: 2px; }
+#answer::placeholder { color: var(--muted); opacity: .5; } /* kana, so it sits in the squares like real input */
+#answer[readonly] { border-color: var(--rule-soft); }    /* locked after a correct answer */
+/* Phones fit too few squares for long answers, so the box becomes a single ink underline */
+@media (max-width: 560px) {
+  #answer { height: auto; font-size: 26px; letter-spacing: .08em; padding: 4px 2px 8px; border: 0; border-bottom: 2px solid var(--ink); background: transparent; }
+  #answer[readonly] { border-bottom-color: var(--rule); }
+}
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { border: 1px solid transparent; border-radius: 0; padding: 10px 22px; min-height: 44px; font-weight: 500; cursor: pointer; }
+.btn.primary { background: var(--ai); border-color: var(--ai); color: var(--on-ai); }
+.btn.primary:hover { opacity: .86; }
+.btn.ghost { background: transparent; border-color: var(--rule); color: var(--ink); }
+.btn.ghost:hover { background: var(--chip); }
+.btn.small { padding: 5px 12px; min-height: 0; font-size: var(--t-sm); }
+/* Destructive actions: red outline, solid red to confirm */
+.btn.danger { background: var(--shu-soft); border-color: var(--shu); color: var(--shu); }
+.btn.danger:hover, .btn.danger-solid { background: var(--shu); border-color: var(--shu); color: var(--sheet); }
+.btn.danger-solid:hover { filter: brightness(1.08); }
+.cheat-btn { margin-left: auto; } /* the cheat sheet button sits apart, at the right */
+
+/* ---------- After a miss: typo note, mistake reading and hints ---------- */
+.typo { padding: 4px 22px 8px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; color: var(--muted); }
+.typo .jp { font-family: var(--f-hand); font-size: var(--t-lg); color: var(--ai); }
+.typo strong { color: var(--ink); font-size: var(--t-lg); }
+.hints { padding: 4px 22px 8px; display: grid; gap: 10px; }
+.diag { font-size: 1.05rem; line-height: 1.6; } /* what the wrong answer looks like it was */
+.diag .k { font-family: var(--f-hand); font-size: 1.05em; }
+.hint-card { background: var(--ai-soft); border: 1px solid var(--rule-soft); padding: 12px 16px; font-size: 1.1rem; line-height: 1.6; }
+.hint-card .lbl { display: block; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 2px; }
+.hint-card .k { font-family: var(--f-hand); font-size: 1.05em; }
+
+/* ---------- Feedback after answering ---------- */
+.feedback { padding: 6px 22px 4px; display: grid; gap: 10px; }
+.fb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; } /* 正解 or 惜しい, then the verdict */
+.fb-head strong { font-size: var(--t-lg); }
+.fb-head .jp { font-family: var(--f-hand); color: var(--shu); font-size: var(--t-lg); }
+.fb-head.miss .jp { color: var(--muted); }
+.ans-big { font-family: var(--f-hand); font-size: 1.9rem; line-height: 1.5; overflow-wrap: anywhere; } /* the answer with furigana */
+.ans-big rt { font-size: .36em; color: var(--muted); font-family: var(--f-ui); letter-spacing: .05em; }
+.given { color: var(--muted); font-size: var(--t-sm); }
+/* Wrong tries: readable tags in a soft red rather than struck through */
+.tried { font-family: var(--f-hand); font-size: 1.05rem; color: var(--ink); background: var(--shu-soft); padding: 0 7px; margin-left: 4px; }
+.also { color: var(--muted); font-size: var(--t-sm); } /* other accepted spellings */
+.also span { font-family: var(--f-hand); color: var(--ink); font-size: var(--t-md); }
+/* 仕組み How it works: the rule that builds this form */
+.rule { border-top: 1px solid var(--rule-soft); padding: 16px 0 4px; font-size: 1.1rem; line-height: 1.7; max-width: 72ch; }
+.rule b { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); display: block; margin-bottom: 4px; }
+.rule b [lang="ja"] { font-family: var(--f-hand); letter-spacing: .04em; margin-right: .5em; }
+.rule .k { font-family: var(--f-hand); font-size: 1.05em; }
+
+/* First-visit tip under the answer box; hidden after the first answer */
+.intro-tip { margin: 0; padding: 12px 22px 18px; font-size: var(--t-sm); color: var(--muted); }
+/* Shown instead of the drill when the settings leave nothing to ask */
+.empty { padding: 48px 22px; text-align: center; color: var(--muted); display: grid; justify-items: center; gap: 14px; }
+.empty p { margin: 0; }
+
+/* ---------- Blocks: the session stats and the sections inside dialogs ---------- */
+.panel { display: grid; gap: 36px; }
+.band { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 32px 40px; align-items: start; }
+/* Section heading: English title left, Japanese right, over an ink line */
+.block h2 {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--ink);
+  font-size: 1.05rem; font-weight: 700; color: var(--ink); letter-spacing: .01em; text-wrap: balance;
+}
+.block h2 .jp { font-family: var(--f-hand); font-weight: 600; font-size: 1rem; color: var(--shu); }
+.muted-note { color: var(--muted); font-size: var(--t-sm); margin: 0; }
+.block .chips + .muted-note { margin-top: 8px; }
+/* Session stats: an ink line above, a soft rule below, mincho numerals */
+.tally { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); }
+.tally > div { padding: 14px 20px; display: grid; gap: 2px; }
+.tally > div + div { border-left: 1px solid var(--rule); }
+.tally .num { font-family: var(--f-hand); font-size: 1.9rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tally .lbl { font-size: var(--t-sm); color: var(--muted); }
+.tally .lbl [lang="ja"] { margin-right: .4em; }
+
+/* ---------- Dialogs ---------- */
+/* Shared by the Score, Study settings and Cheat sheet dialogs */
+dialog.modal {
+  max-height: calc(100% - 24px); padding: 0;
+  border: 1px solid var(--rule); border-radius: 2px; background: var(--sheet); color: var(--ink); overflow: hidden;
+}
+dialog.modal[open] { display: flex; flex-direction: column; } /* fixed header, scrolling body */
+dialog.modal::backdrop { background: rgba(8, 11, 18, .55); }
+/* Dialog header: title, any controls, and the Done or Close button */
+.modal-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid var(--rule); }
+.modal-head h2 { margin: 0; font-size: var(--t-lg); }
+.modal-head h2 .jp { font-family: var(--f-hand); font-weight: 600; color: var(--shu); margin-left: 6px; }
+#settingsClose, #scoreClose { margin-left: auto; } /* pushed to the right; the cheat sheet's zoom slider does that for its Close */
+dialog.settings { width: min(1100px, calc(100% - 24px)); } /* Score and Study settings */
+.settings-body { overflow: auto; padding: 20px 20px 28px; }
+
+/* Score dialog: one bar per form, split by how much help each answer needed */
+.sc-overall { margin: 0 0 6px; font-size: var(--t-md); }
+.sc-overall b { font-size: 1.4rem; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.sc-time { margin: 0 0 10px; font-size: var(--t-sm); color: var(--muted); } /* study time, when the Study timer is on */
+.sc-time b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.score { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px 32px; }
+.score li { display: grid; gap: 5px; min-width: 0; }
+.sc-top { display: flex; align-items: center; gap: 8px; }
+.sc-kind { font-size: var(--t-xs); color: var(--muted); }
+.sc-pct { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sc-bar { display: flex; height: 10px; border-radius: 4px; background: var(--chip); }
+.sc-bar i { display: block; height: 100%; position: relative; outline: none; }
+/* No overflow: hidden on the bar (it would clip the tooltips), so the end segments round its corners */
+.sc-bar i:first-child { border-radius: 4px 0 0 4px; }
+.sc-bar i:last-child { border-radius: 0 4px 4px 0; }
+.sc-bar i:only-child { border-radius: 4px; }
+.sc-bar i:hover, .sc-bar i:focus { filter: brightness(1.12); }
+.sc-bar i::before { content: ""; position: absolute; inset: -6px 0; } /* a taller invisible hit area, so the thin bar is easy to point at */
+/* Point at (or tap) a color to see how many answers it stands for */
+.sc-bar i::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 3;
+  background: var(--ink); color: var(--sheet); font-size: var(--t-xs); font-style: normal; padding: 3px 8px; border-radius: 2px; white-space: nowrap;
+  pointer-events: none; opacity: 0; transition: opacity .12s;
+}
+.sc-bar i:first-child::after { left: 0; transform: none; }                        /* the ends anchor their tip inward, */
+.sc-bar i:last-child:not(:first-child)::after { left: auto; right: 0; transform: none; } /* so it never runs off the dialog */
+.sc-bar i:hover::after, .sc-bar i:focus::after { opacity: 1; }
+.sc-counts { font-size: var(--t-sm); color: var(--muted); font-variant-numeric: tabular-nums; } /* "2/3": first-try answers out of all */
+.sc-legend { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: var(--t-xs); color: var(--muted); margin-top: 10px; }
+.sc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.s-ok { background: var(--s-ok); } .s-h1 { background: var(--s-h1); } .s-h2 { background: var(--s-h2); } .s-x { background: var(--s-x); }
+.reset-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--t-sm); }
+.score-reset { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rule); }
+
+/* ---------- Study settings ---------- */
+.settings-note { font-size: var(--t-sm); color: var(--muted); }
+/* Sections flow like newspaper columns: no fixed placement, no gaps, as many columns as fit */
+.flow { columns: 280px 3; column-gap: 40px; }
+.flow > .block { break-inside: avoid; margin-bottom: 32px; }
+/* A group of forms: dotted heading, an All/None toggle, then its chips */
+.group { display: grid; gap: 8px; }
+.group + .group { margin-top: 14px; }
+.group-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.group-head h3 { margin: 0; font-size: var(--t-sm); font-weight: 700; color: var(--ink); }
+.group-head h3::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ai); margin-right: 7px; vertical-align: middle; }
+.group-toggle { background: none; border: 0; color: var(--ai); font-size: var(--t-xs); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.group-toggle:hover { text-decoration: underline; }
+/* Chips: toggle buttons, inked when on */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--rule); background: var(--sheet); border-radius: 2px; padding: 4px 11px; font-size: var(--t-sm); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ai); border-color: var(--ai); color: var(--on-ai); }
+.chip:hover { border-color: var(--ai); }
+.chip:disabled { opacity: .45; cursor: default; }
+.chip:disabled:hover { border-color: var(--rule); }
+/* Saved presets: the chip applies it, the × beside it deletes it */
+.my-presets { margin-top: 8px; }
+.preset { display: inline-flex; }
+.preset .chip { border-radius: 2px 0 0 2px; }
+.preset-del { border: 1px solid var(--rule); border-left: 0; border-radius: 0 2px 2px 0; background: var(--sheet); color: var(--muted); padding: 0 10px; cursor: pointer; font-size: var(--t-sm); }
+.preset-del:hover { color: var(--shu); border-color: var(--shu); }
+.preset-save { display: flex; gap: 6px; margin-top: 12px; }
+.preset-save input { flex: 1; min-width: 0; border: 1px solid var(--rule); border-radius: 2px; padding: 5px 10px; background: var(--sheet); color: var(--ink); font: inherit; font-size: var(--t-sm); }
+.preset-save input:focus { outline: none; border-color: var(--ai); }
+.preset-save input::placeholder { color: var(--muted); }
+.preset-msg { margin-top: 6px; }
+/* Versions: a label column (Tense, Polarity, Speech) and its chips */
+.pairs { display: grid; gap: 8px; }
+.pair { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); align-items: center; gap: 8px; }
+.pair-name { font-size: var(--t-sm); color: var(--muted); }
+.pairs + .muted-note { margin-top: 10px; }
+
+/* ---------- Cheat sheet ---------- */
+dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen width */
+.tabs { display: flex; gap: 4px; background: var(--chip); padding: 3px; border-radius: 2px; }
+.tabs button { border: 0; background: none; padding: 5px 14px; border-radius: 2px; cursor: pointer; font-size: var(--t-sm); font-weight: 500; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--sheet); color: var(--ink); box-shadow: 0 1px 2px rgba(27, 34, 50, .12); }
+/* Text size slider */
+.zoom { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: var(--t-sm); color: var(--muted); }
+.zoom input { width: 120px; accent-color: var(--ai); }
+.zoom output { min-width: 3.2em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cheat-body { overflow: auto; padding: 4px 20px 24px; }
+.cheat-body > [role="tabpanel"] { zoom: var(--cheat-zoom, 1); } /* set by the slider */
+.cheat-body section { margin-top: 20px; }
+.cheat-body h3 { margin: 0 0 8px; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.cheat-body h4 { margin: 18px 0 8px; font-size: var(--t-md); font-weight: 700; }
+.tips { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; max-width: 78ch; font-size: var(--t-sm); }
+.tips [lang="ja"], .note [lang="ja"] { font-family: var(--f-hand); }
+.mini { background: var(--chip); border-radius: 2px; padding: 0 6px; margin: 0 2px; white-space: nowrap; } /* inline kana label */
+.note { font-size: var(--t-sm); color: var(--muted); margin: 8px 0 0; max-width: 78ch; }
+
+/* "What the forms mean": a button per form, and the explanation of the one picked */
+.legend { display: grid; gap: 10px; padding: 14px 16px; background: var(--paper); border: 1px solid var(--rule); border-radius: 2px; }
+.legend h3 { margin: 0; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; font-size: var(--t-sm); color: var(--muted); }
+.key .seg { margin-right: 4px; }
+.form-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.form-btn { border: 1px solid var(--rule); background: var(--sheet); border-radius: 2px; padding: 4px 5px; cursor: pointer; line-height: 1.4; }
+.form-btn:hover { border-color: var(--ai); }
+.form-btn[aria-pressed="true"] { border-color: var(--ai); box-shadow: 0 0 0 1px var(--ai); }
+.form-info { background: var(--sheet); border: 1px solid var(--rule); border-radius: 2px; padding: 12px 14px; }
+.fi-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.form-info p { margin: 6px 0 0; font-size: var(--t-sm); max-width: 72ch; }
+.fi-eg { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.fi-eg .ex { font-size: 1.3rem; }
+.fi-eg .muted { color: var(--muted); }
+
+/* Conjugation tables. No overflow here: the cheat sheet body is the scroller, so the header row can stick to its top */
+.tbl { border: 1px solid var(--rule); border-radius: 2px; }
+.tbl table { border-collapse: collapse; width: 100%; font-size: var(--t-sm); }
+.tbl th, .tbl td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.tbl thead th {
+  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; background: var(--paper);
+  position: sticky; top: -4px; z-index: 2; box-shadow: inset 0 -1px 0 var(--rule), 0 4px 8px -6px rgba(0, 0, 0, .35);
+}
+.tbl thead th:first-child { border-top-left-radius: 2px; }
+.tbl thead th:last-child { border-top-right-radius: 2px; }
+/* The sticky header needs an opaque background, so its highlight is layered over the paper color */
+.tbl thead th.hl { background: linear-gradient(color-mix(in srgb, var(--ai-soft) 50%, transparent), color-mix(in srgb, var(--ai-soft) 50%, transparent)) var(--paper); }
+.tbl tbody tr:last-child > * { border-bottom: 0; }
+.tbl .eg { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; } /* example word under a column name */
+.tbl tr.grp th { background: var(--paper); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 5px 10px; }
+.tbl tbody th { font-weight: 500; white-space: nowrap; }
+.form-cell { display: inline-flex; gap: 4px; }
+.form-cell .seg, .key .seg { padding: 0 7px; border-radius: 2px; font-size: var(--t-xs); font-weight: 700; }
+.pat { display: block; color: var(--muted); font-size: var(--t-xs); min-width: 9em; } /* the ending pattern above an example */
+.ex { font-family: var(--f-hand); font-size: 1.05rem; white-space: nowrap; }
+.tbl rt, .form-info rt, .end-card rt { font-size: .5em; color: var(--muted); font-family: var(--f-ui); } /* furigana in the cheat sheet */
+/* The current question's word class (column) and form (row) */
+.tbl .hl { background: color-mix(in srgb, var(--ai-soft) 50%, transparent); }
+.tbl tr.now > * { background: var(--ai-soft); }
+.tbl tr.now > .hl { box-shadow: inset 0 0 0 2px var(--ai); }
+
+/* Godan endings: which row each form uses, a card per ending, and the て-form groups */
+.row-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 8px; }
+.row-legend li { display: flex; gap: 10px; align-items: baseline; background: var(--chip); border-radius: 2px; padding: 8px 12px; font-size: var(--t-sm); }
+.row-name { font-family: var(--f-hand); font-weight: 600; white-space: nowrap; color: var(--ai); }
+.end-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 215px), 1fr)); gap: 10px; }
+.end-card { border: 1px solid var(--rule); border-radius: 2px; padding: 10px 14px 12px; background: var(--sheet); }
+.end-card.now { border-color: var(--ai); background: var(--ai-soft); } /* the current word's ending */
+.end-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.end-kana { font-family: var(--f-hand); font-size: 1.5rem; font-weight: 600; line-height: 1.3; }
+.end-note { font-size: var(--t-xs); color: var(--shu); }
+.end-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.end-card li { display: grid; grid-template-columns: 3.4em 1.5em minmax(0, 1fr); align-items: baseline; gap: 6px; font-size: var(--t-sm); } /* row name, kana, example */
+.end-card .kana { font-family: var(--f-hand); font-size: 1.2rem; font-weight: 600; }
+.te-rule { font-family: var(--f-hand); font-size: 1.5rem; font-weight: 600; }
+.te-rule .muted { color: var(--muted); font-size: .8em; }
+.te-ex { display: grid; gap: 2px; margin-top: 4px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <!-- Header: seal, title, and the Score and Study settings buttons -->
+  <header>
+    <div class="seal" aria-hidden="true">活用</div>
+    <div class="brand">
+      <h1>Katsuyō</h1>
+      <p>Japanese verb and adjective conjugation drills</p>
+    </div>
+    <nav class="head-nav" aria-label="Main">
+      <button type="button" class="btn ghost head-btn" id="scoreBtn" aria-haspopup="dialog">
+        <span><span class="btn-jp" lang="ja">成績</span>Score</span>
+      </button>
+      <button type="button" class="btn ghost head-btn" id="settingsBtn" aria-haspopup="dialog">
+        <span><span class="btn-jp" lang="ja">設定</span>Study settings</span> <span class="settings-sum" id="settingsSum"></span>
+      </button>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <!-- The drill: word, target form, answer box, then hints and feedback as they come -->
+    <div class="drill-row">
+      <section class="sheet" id="sheet" aria-label="Drill">
+        <div class="sheet-top">
+          <div class="tags"><span class="tag" id="tag"></span><span class="tag retry" id="retryTag" hidden></span></div>
+          <div class="sheet-meta">
+            <span class="timer" id="timer" title="Study time this session. It pauses when you step away." hidden><span lang="ja">時間</span><span id="timerVal">0:00</span></span>
+            <span class="qno" id="qno"></span>
+          </div>
+        </div>
+        <div id="drill">
+          <div class="prompt">
+            <div class="word-wrap">
+              <p class="word" id="word" lang="ja"></p>
+              <div class="stamp" id="stamp" aria-hidden="true" hidden></div>
+            </div>
+            <div class="meaning" id="meaning"></div>
+            <div class="brush" aria-hidden="true"></div>
+            <div class="target"><span class="arrow" lang="ja" aria-hidden="true">へ</span><span class="form-en" id="formEn"></span></div>
+          </div>
+          <form class="answer" id="answerForm" autocomplete="off">
+            <div class="line">
+              <label for="answer"><span lang="ja">答え</span>Your answer</label>
+              <input id="answer" lang="ja" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="たべません">
+            </div>
+            <div class="actions">
+              <button type="submit" class="btn primary" id="checkBtn"><span class="btn-jp" lang="ja">確認</span>Check</button>
+              <button type="button" class="btn ghost" id="revealBtn"><span class="btn-jp" lang="ja">答え</span>Show answer</button>
+              <button type="button" class="btn ghost cheat-btn" id="cheatBtn" aria-haspopup="dialog"><span class="btn-jp" lang="ja">早見表</span>Cheat sheet</button>
+            </div>
+          </form>
+          <div class="typo" id="typoNote" aria-live="polite" hidden><span class="jp" lang="ja">あれ？</span><strong>Looks like a typo.</strong><span>Fix it and press Enter. It won't count against you.</span></div>
+          <div class="hints" id="hints" aria-live="polite" hidden></div>
+          <div class="feedback" id="feedback" aria-live="polite" hidden></div>
+          <p class="intro-tip" id="intro">Type romaji and it turns into kana as you go, or use a Japanese keyboard. A wrong answer unlocks a hint about the word type, then one about the rule. After a third miss the answer appears on the word, and you type it to move on. <kbd>Enter</kbd> checks, <kbd>Enter</kbd> again moves on.</p>
+        </div>
+        <div class="empty" id="emptyState" hidden>
+          <p>Nothing to drill. Pick the forms you want, and at least one word type that fits them.</p>
+          <button type="button" class="btn primary" id="emptySettingsBtn">Open study settings</button>
+        </div>
+      </section>
+      <aside class="form-strip" id="formJp" lang="ja" aria-label="Form, in Japanese"></aside>
+    </div>
+
+    <!-- Session stats -->
+    <aside class="panel">
+      <div class="band">
+        <div class="block">
+          <h2><span>This session</span><span class="jp" lang="ja">今回</span></h2>
+          <div class="tally">
+            <div><span class="num" id="streak">0</span><span class="lbl"><span lang="ja">連続</span>Streak</span></div>
+            <div><span class="num" id="acc">–</span><span class="lbl"><span lang="ja">正答</span><span id="accLbl">Correct</span></span></div>
+            <div><span class="num" id="best">0</span><span class="lbl"><span lang="ja">最高</span>Best streak</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Rough ink edges for the stamp -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.5" result="rough"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.8" result="speckle"/>
+      <feComposite in="rough" in2="speckle" operator="in"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- Score: every form practiced, weakest first, and the reset button -->
+<dialog class="modal settings" id="scoreDlg" aria-labelledby="scoreTitle">
+  <div class="modal-head">
+    <h2 id="scoreTitle">Score <span class="jp" lang="ja">成績</span></h2>
+    <button type="button" class="btn primary small" id="scoreClose">Done</button>
+  </div>
+  <div class="settings-body">
+    <p class="sc-overall" id="scOverall" hidden></p>
+    <p class="sc-time" id="scTime" hidden></p>
+    <p class="muted-note">Every form you've practiced, weakest first. A first-try answer earns full marks, each hint costs a third, and a shown answer scores zero. Under each bar is how many you got on the first try out of all your answers; point at a color to see its count. Behind the scenes, each rule you miss or answer slowly comes back sooner, and ones you know well wait longer, up to weeks.</p>
+    <div class="sc-legend"><span><i class="s-ok"></i>First try</span><span><i class="s-h1"></i>After 1 hint</span><span><i class="s-h2"></i>After 2 hints</span><span><i class="s-x"></i>Answer shown</span></div>
+    <ul class="score" id="weak"></ul>
+    <p class="muted-note" id="weakEmpty">Answer a few questions and every form you practice shows up here with its score.</p>
+    <div class="reset-row score-reset" id="resetRow"></div>
+  </div>
+</dialog>
+
+<!-- Study settings: what to practice and how questions look -->
+<dialog class="modal settings" id="settingsDlg" aria-labelledby="settingsTitle">
+  <div class="modal-head">
+    <h2 id="settingsTitle">Study settings</h2>
+    <span class="settings-note">Changes apply right away.</span>
+    <button type="button" class="btn primary small" id="settingsClose">Done</button>
+  </div>
+  <div class="settings-body">
+    <!-- Sections flow down and across as many columns as fit, and the browser balances their heights -->
+    <div class="flow">
+      <div class="block">
+        <h2><span>Presets</span><span class="jp" lang="ja">プリセット</span></h2>
+        <div class="chips" id="quickChips"></div>
+        <div class="chips my-presets" id="myPresets" hidden></div>
+        <form class="preset-save" id="presetForm" autocomplete="off">
+          <input id="presetName" type="text" maxlength="30" placeholder="Name this setup, e.g. Past practice" aria-label="Name for a new preset">
+          <button type="submit" class="btn ghost small">Save preset</button>
+        </form>
+        <p class="muted-note preset-msg" id="presetMsg" aria-live="polite">Saves the forms, versions, words and question style you have picked now.</p>
+      </div>
+
+      <div class="block">
+        <h2><span>Versions</span><span class="jp" lang="ja">種類</span></h2>
+        <div class="pairs" id="filterPairs"></div>
+        <p class="muted-note">Each form you pick comes in the versions switched on here. Past alone gives 書いた, 書きました, 書けた… Forms with no past, negative or polite version, like the て-form, count as present, affirmative and plain.</p>
+      </div>
+
+      <div class="block">
+        <h2><span>Words</span><span class="jp" lang="ja">単語</span></h2>
+        <div class="chips" id="typeChips"></div>
+      </div>
+
+      <div class="block">
+        <h2><span>Verb forms</span><span class="jp" lang="ja">動詞</span></h2>
+        <div id="verbGroups"></div>
+      </div>
+
+      <div class="block">
+        <h2><span>Adjective and noun forms</span><span class="jp" lang="ja">形容詞・名詞</span></h2>
+        <div id="adjGroups"></div>
+      </div>
+
+      <div class="block">
+        <h2><span>Question style</span><span class="jp" lang="ja">出題</span></h2>
+        <div class="chips" id="promptChips"></div>
+        <p class="muted-note">Translate from English gives a meaning to put into Japanese, like “I didn't write” + Polite, instead of naming the form.</p>
+      </div>
+
+      <div class="block">
+        <h2><span>Display</span><span class="jp" lang="ja">表示</span></h2>
+        <div class="chips">
+          <button class="chip" id="optFuri" aria-pressed="true">Furigana</button>
+          <button class="chip" id="optMeaning" aria-pressed="true">Word meaning</button>
+          <button class="chip" id="optType" aria-pressed="false">Word type</button>
+          <button class="chip" id="optTimer" aria-pressed="false">Study timer</button>
+        </div>
+        <p class="muted-note">Study timer shows how long you've studied this session beside the question number, and your time today and in all in Score. It pauses when you step away.</p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Cheat sheet: built by buildCheat() each time it opens -->
+<dialog class="modal cheat" id="cheat" aria-labelledby="cheatTitle">
+  <div class="modal-head">
+    <h2 id="cheatTitle">Cheat sheet</h2>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabVerbs" aria-selected="true" aria-controls="cheatVerbs">Verbs</button>
+      <button type="button" role="tab" id="tabAdjs" aria-selected="false" aria-controls="cheatAdjs">Adjectives &amp; nouns</button>
+    </div>
+    <label class="zoom" for="cheatZoom">Text size
+      <input type="range" id="cheatZoom" min="80" max="160" step="10" value="100">
+      <output id="cheatZoomVal" for="cheatZoom">100%</output>
+    </label>
+    <button type="button" class="btn ghost small" id="cheatClose">Close</button>
+  </div>
+  <div class="cheat-body">
+    <div id="cheatVerbs" role="tabpanel" aria-labelledby="tabVerbs"></div>
+    <div id="cheatAdjs" role="tabpanel" aria-labelledby="tabAdjs" hidden></div>
+  </div>
+</dialog>
+
+<script>
+// ---------- Words ----------
+// Each entry: [kanji, reading, English meaning, class, optional flags].
+// Classes: godan, ichidan, suru (する and its compounds), kuru (来る), iadj, naadj, noun.
+// Flags: lim = only the core tense forms make sense (ある, 分かる…); iku = 行く's irregular て-form;
+//        aru = ある's plain negative is just ない; no = forms to skip; ii = いい conjugates from よい;
+//        endsI = a な-adjective that happens to end in い (きれい, 嫌い).
+const WORDS = [
+  ['会う','あう','to meet','godan'], ['買う','かう','to buy','godan'], ['言う','いう','to say','godan'],
+  ['使う','つかう','to use','godan'], ['洗う','あらう','to wash','godan'],
+  ['待つ','まつ','to wait','godan'], ['持つ','もつ','to hold','godan'], ['立つ','たつ','to stand','godan'],
+  ['帰る','かえる','to go home','godan'], ['入る','はいる','to enter','godan'], ['走る','はしる','to run','godan'],
+  ['知る','しる','to come to know','godan'], ['切る','きる','to cut','godan'], ['分かる','わかる','to understand','godan',{lim:1}],
+  ['作る','つくる','to make','godan'], ['乗る','のる','to ride','godan'], ['取る','とる','to take','godan'],
+  ['書く','かく','to write','godan'], ['聞く','きく','to listen','godan'], ['歩く','あるく','to walk','godan'],
+  ['働く','はたらく','to work','godan'], ['行く','いく','to go','godan',{iku:1}],
+  ['泳ぐ','およぐ','to swim','godan'], ['急ぐ','いそぐ','to hurry','godan'], ['脱ぐ','ぬぐ','to take off (clothes)','godan'],
+  ['話す','はなす','to speak','godan'], ['貸す','かす','to lend','godan'], ['押す','おす','to push','godan'],
+  ['死ぬ','しぬ','to die','godan',{no:['imp']}],
+  ['遊ぶ','あそぶ','to play','godan'], ['呼ぶ','よぶ','to call','godan'], ['飛ぶ','とぶ','to fly','godan'],
+  ['読む','よむ','to read','godan'], ['飲む','のむ','to drink','godan'], ['休む','やすむ','to rest','godan'], ['住む','すむ','to live (somewhere)','godan'],
+  ['ある','ある','to exist (things)','godan',{aru:1,lim:1}],
+  ['食べる','たべる','to eat','ichidan'], ['見る','みる','to see','ichidan'], ['起きる','おきる','to wake up','ichidan'],
+  ['寝る','ねる','to sleep','ichidan'], ['教える','おしえる','to teach','ichidan'], ['着る','きる','to wear','ichidan'],
+  ['出る','でる','to leave','ichidan'], ['開ける','あける','to open','ichidan'], ['借りる','かりる','to borrow','ichidan'],
+  ['忘れる','わすれる','to forget','ichidan'], ['始める','はじめる','to begin','ichidan'], ['いる','いる','to exist (people, animals)','ichidan',{lim:1}],
+  ['答える','こたえる','to answer','ichidan'], ['信じる','しんじる','to believe','ichidan'], ['降りる','おりる','to get off','ichidan'],
+  ['する','する','to do','suru'], ['勉強する','べんきょうする','to study','suru'], ['運転する','うんてんする','to drive','suru'],
+  ['料理する','りょうりする','to cook','suru'], ['来る','くる','to come','kuru'],
+  ['高い','たかい','expensive; tall','iadj'], ['安い','やすい','cheap','iadj'], ['大きい','おおきい','big','iadj'],
+  ['小さい','ちいさい','small','iadj'], ['新しい','あたらしい','new','iadj'], ['古い','ふるい','old (things)','iadj'],
+  ['暑い','あつい','hot (weather)','iadj'], ['寒い','さむい','cold (weather)','iadj'], ['楽しい','たのしい','fun','iadj'],
+  ['難しい','むずかしい','difficult','iadj'], ['忙しい','いそがしい','busy','iadj'], ['おいしい','おいしい','delicious','iadj'],
+  ['面白い','おもしろい','interesting','iadj'], ['早い','はやい','early','iadj'], ['長い','ながい','long','iadj'],
+  ['いい','いい','good','iadj',{ii:1}], ['かっこいい','かっこいい','cool, good-looking','iadj',{ii:1}],
+  ['静か','しずか','quiet','naadj'], ['きれい','きれい','pretty; clean','naadj',{endsI:1}], ['元気','げんき','healthy, lively','naadj'],
+  ['好き','すき','liked','naadj'], ['嫌い','きらい','disliked','naadj',{endsI:1}], ['有名','ゆうめい','famous','naadj'],
+  ['便利','べんり','convenient','naadj'], ['暇','ひま','free (not busy)','naadj'], ['大切','たいせつ','important','naadj'],
+  ['簡単','かんたん','simple','naadj'], ['親切','しんせつ','kind','naadj'], ['上手','じょうず','skilled','naadj'],
+
+  ['歌う','うたう','to sing','godan'], ['習う','ならう','to learn','godan'], ['手伝う','てつだう','to help','godan'],
+  ['払う','はらう','to pay','godan'], ['思う','おもう','to think','godan'], ['笑う','わらう','to laugh','godan'],
+  ['拾う','ひろう','to pick up','godan'], ['違う','ちがう','to differ','godan',{lim:1}],
+  ['勝つ','かつ','to win','godan'], ['打つ','うつ','to hit','godan'], ['育つ','そだつ','to grow up','godan'],
+  ['終わる','おわる','to end','godan'], ['座る','すわる','to sit','godan'], ['送る','おくる','to send','godan'],
+  ['怒る','おこる','to get angry','godan'], ['頑張る','がんばる','to try hard','godan'], ['曲がる','まがる','to turn','godan'],
+  ['止まる','とまる','to come to a stop','godan'], ['始まる','はじまる','to start (by itself)','godan'], ['困る','こまる','to be in trouble','godan'],
+  ['要る','いる','to need','godan',{lim:1}], ['減る','へる','to decrease','godan'], ['喋る','しゃべる','to chat','godan'],
+  ['滑る','すべる','to slip','godan'], ['蹴る','ける','to kick','godan'], ['握る','にぎる','to grip','godan'],
+  ['着く','つく','to arrive','godan'], ['置く','おく','to put','godan'], ['開く','あく','to open (by itself)','godan'],
+  ['泣く','なく','to cry','godan'], ['引く','ひく','to pull','godan'], ['弾く','ひく','to play (an instrument)','godan'],
+  ['磨く','みがく','to polish, brush','godan'], ['咲く','さく','to bloom','godan'], ['履く','はく','to put on (shoes)','godan'],
+  ['焼く','やく','to bake, grill','godan'], ['続く','つづく','to continue (by itself)','godan'],
+  ['騒ぐ','さわぐ','to make noise','godan'], ['稼ぐ','かせぐ','to earn','godan'], ['防ぐ','ふせぐ','to prevent','godan'],
+  ['出す','だす','to take out','godan'], ['返す','かえす','to give back','godan'], ['消す','けす','to turn off','godan'],
+  ['探す','さがす','to look for','godan'], ['渡す','わたす','to hand over','godan'], ['直す','なおす','to fix','godan'],
+  ['起こす','おこす','to wake (someone) up','godan'],
+  ['選ぶ','えらぶ','to choose','godan'], ['運ぶ','はこぶ','to carry','godan'], ['喜ぶ','よろこぶ','to be glad','godan'], ['並ぶ','ならぶ','to line up','godan'],
+  ['頼む','たのむ','to ask (a favor)','godan'], ['楽しむ','たのしむ','to enjoy','godan'], ['盗む','ぬすむ','to steal','godan'],
+  ['包む','つつむ','to wrap','godan'], ['進む','すすむ','to advance','godan'],
+
+  ['浴びる','あびる','to bathe in (a shower)','ichidan'], ['生きる','いきる','to live','ichidan'], ['できる','できる','to be able to','ichidan',{lim:1}],
+  ['足りる','たりる','to be enough','ichidan',{lim:1}], ['落ちる','おちる','to fall','ichidan'], ['閉める','しめる','to close','ichidan'],
+  ['止める','とめる','to stop (something)','ichidan'], ['決める','きめる','to decide','ichidan'], ['覚える','おぼえる','to memorize','ichidan'],
+  ['考える','かんがえる','to think about','ichidan'], ['調べる','しらべる','to look up','ichidan'], ['疲れる','つかれる','to get tired','ichidan',{lim:1}],
+  ['遅れる','おくれる','to be late','ichidan'], ['晴れる','はれる','to clear up (weather)','ichidan',{lim:1}], ['見せる','みせる','to show','ichidan'],
+  ['受ける','うける','to take (an exam)','ichidan'], ['着替える','きがえる','to change clothes','ichidan'], ['入れる','いれる','to put in','ichidan'],
+  ['捨てる','すてる','to throw away','ichidan'], ['集める','あつめる','to collect','ichidan'], ['続ける','つづける','to continue (something)','ichidan'],
+  ['生まれる','うまれる','to be born','ichidan',{lim:1}], ['投げる','なげる','to throw','ichidan'], ['逃げる','にげる','to run away','ichidan'],
+  ['育てる','そだてる','to raise','ichidan'],
+
+  ['掃除する','そうじする','to clean','suru'], ['散歩する','さんぽする','to take a walk','suru'], ['説明する','せつめいする','to explain','suru'],
+  ['結婚する','けっこんする','to get married','suru'], ['練習する','れんしゅうする','to practice','suru'], ['洗濯する','せんたくする','to do laundry','suru'],
+  ['心配する','しんぱいする','to worry','suru'], ['準備する','じゅんびする','to prepare','suru'],
+
+  ['白い','しろい','white','iadj'], ['黒い','くろい','black','iadj'], ['赤い','あかい','red','iadj'], ['青い','あおい','blue','iadj'],
+  ['広い','ひろい','spacious','iadj'], ['狭い','せまい','cramped','iadj'], ['重い','おもい','heavy','iadj'], ['軽い','かるい','light (weight)','iadj'],
+  ['強い','つよい','strong','iadj'], ['弱い','よわい','weak','iadj'], ['暗い','くらい','dark','iadj'], ['明るい','あかるい','bright','iadj'],
+  ['近い','ちかい','near','iadj'], ['遠い','とおい','far','iadj'], ['若い','わかい','young','iadj'], ['優しい','やさしい','gentle, kind','iadj'],
+  ['嬉しい','うれしい','glad','iadj'], ['悲しい','かなしい','sad','iadj'], ['痛い','いたい','painful','iadj'], ['眠い','ねむい','sleepy','iadj'],
+  ['甘い','あまい','sweet','iadj'], ['辛い','からい','spicy','iadj'], ['冷たい','つめたい','cold (to the touch)','iadj'], ['暖かい','あたたかい','warm','iadj'],
+  ['怖い','こわい','scary','iadj'], ['汚い','きたない','dirty','iadj'], ['多い','おおい','many','iadj'], ['少ない','すくない','few','iadj'],
+
+  ['賑やか','にぎやか','lively','naadj'], ['大丈夫','だいじょうぶ','all right','naadj'], ['大変','たいへん','tough, hard','naadj'],
+  ['不便','ふべん','inconvenient','naadj'], ['丈夫','じょうぶ','sturdy','naadj'], ['下手','へた','unskilled','naadj'],
+  ['安全','あんぜん','safe','naadj'], ['危険','きけん','dangerous','naadj'], ['自由','じゆう','free (unrestricted)','naadj'],
+  ['必要','ひつよう','necessary','naadj'], ['残念','ざんねん','disappointing','naadj'], ['素敵','すてき','lovely','naadj'],
+  ['真面目','まじめ','serious, diligent','naadj'], ['楽','らく','easy, comfortable','naadj'], ['特別','とくべつ','special','naadj'],
+  ['幸せ','しあわせ','happy','naadj'], ['複雑','ふくざつ','complicated','naadj'], ['得意','とくい','good at','naadj'], ['苦手','にがて','bad at','naadj'],
+
+  ['学生','がくせい','a student','noun'], ['先生','せんせい','a teacher','noun'], ['雨','あめ','rain','noun'],
+  ['日本人','にほんじん','Japanese (a person)','noun'], ['休み','やすみ','a day off','noun'], ['本','ほん','a book','noun'],
+  ['友達','ともだち','a friend','noun'], ['病気','びょうき','sick (ill)','noun'], ['会社員','かいしゃいん','an office worker','noun'],
+  ['子供','こども','a child','noun'], ['医者','いしゃ','a doctor','noun'], ['仕事','しごと','work (a job)','noun'],
+  ['誕生日','たんじょうび','a birthday','noun'], ['夏','なつ','summer','noun'], ['冬','ふゆ','winter','noun'],
+  ['嘘','うそ','a lie','noun'], ['本当','ほんとう','true (the truth)','noun'], ['大人','おとな','an adult','noun'],
+  ['晴れ','はれ','sunny (weather)','noun'], ['猫','ねこ','a cat','noun'], ['留学生','りゅうがくせい','an exchange student','noun'],
+  ['日曜日','にちようび','Sunday','noun'],
+].map(([k, r, m, c, f]) => ({ k, r, m, c, ...(f || {}) })); // each array becomes { k, r, m, c, ...flags }
+
+// ---------- Conjugation engine ----------
+// Every form is built from a string s, which is either the kanji spelling or the kana reading of a word, so the
+// same code produces 書きます and かきます. Each form maps to a list: the first item is the textbook answer and any
+// others are also accepted (書かされる / 書かせられる, 食べられる / 食べれる…).
+
+// The five kana of each godan ending's row, in あ い う え お order: ROWS['く'][0] is か, [1] is き, and so on
+const ROWS = {
+  'う':'わいうえお','く':'かきくけこ','ぐ':'がぎぐげご','す':'さしすせそ','つ':'たちつてと',
+  'ぬ':'なにぬねの','ぶ':'ばびぶべぼ','む':'まみむめも','る':'らりるれろ'
+};
+// The godan て-form sound change, by the verb's last kana (書く → 書いて, 読む → 読んで)
+const TE = { 'う':'って','つ':'って','る':'って','む':'んで','ぶ':'んで','ぬ':'んで','く':'いて','ぐ':'いで','す':'して' };
+// The past is the て-form with て → た and で → だ (書いて → 書いた, 読んで → 読んだ)
+const toTa = te => te.replace(/て$/, 'た').replace(/で$/, 'だ');
+// Godan endings that share a て-form sound change, for hints that name the whole group
+const TE_GROUP = { 'う':'う, つ, る', 'つ':'う, つ, る', 'る':'う, つ, る', 'む':'む, ぶ, ぬ', 'ぶ':'む, ぶ, ぬ', 'ぬ':'む, ぶ, ぬ', 'く':'く', 'ぐ':'ぐ', 'す':'す' };
+
+// All verb forms of s. First each class fills in the same handful of stems (t), then the shared endings are added.
+function verbTable(s, w) {
+  let t;
+  if (w.c === 'godan') {
+    const b = s.slice(0, -1), e = s.slice(-1), R = ROWS[e];   // b = everything before the last kana, e = the last kana
+    const te = w.iku ? b + 'って' : b + TE[e];                  // 行く is the one く-verb that takes って
+    const a = b + R[0], ee = b + R[3], o = b + R[4];            // the あ-row, え-row and お-row stems
+    t = { i: b + R[1], nai: [w.aru ? 'ない' : a + 'ない'], nakatta: [w.aru ? 'なかった' : a + 'なかった'], te: [te], ta: [toTa(te)],
+      pot: [ee + 'る'], pass: [a + 'れる'], caus: [a + 'せる'],
+      cpass: e === 'す' ? [a + 'せられる'] : [a + 'される', a + 'せられる'], // す-verbs only have the long causative-passive
+      vol: [o + 'う'], imp: [ee], ba: [ee + 'ば'] };
+  } else if (w.c === 'ichidan') {
+    const b = s.slice(0, -1);                                   // ichidan verbs just drop る
+    t = { i: b, nai: [b + 'ない'], nakatta: [b + 'なかった'], te: [b + 'て'], ta: [b + 'た'],
+      pot: [b + 'られる', b + 'れる'],                            // 食べれる (ら-less) is common in speech, so it's accepted
+      pass: [b + 'られる'], caus: [b + 'させる'], cpass: [b + 'させられる'], vol: [b + 'よう'], imp: [b + 'ろ'], ba: [b + 'れば'] };
+  } else if (w.c === 'suru') {
+    const p = s.slice(0, -2);                                   // the part before する (勉強 in 勉強する, empty for する)
+    t = { i: p + 'し', nai: [p + 'しない'], nakatta: [p + 'しなかった'], te: [p + 'して'], ta: [p + 'した'], pot: [p + 'できる'],
+      pass: [p + 'される'], caus: [p + 'させる'], cpass: [p + 'させられる'], vol: [p + 'しよう'], imp: [p + 'しろ', p + 'せよ'], ba: [p + 'すれば'] };
+  } else {
+    // 来る: the kanji stays 来 while its reading shifts between く, き and こ
+    const p = s.slice(0, -2), K = s.slice(-2, -1) === '来';   // K: are we building the kanji spelling?
+    const f = x => p + (K ? '来' + x.slice(1) : x);              // swap the reading's first kana for 来 in the kanji spelling
+    t = { i: f('き'), nai: [f('こない')], nakatta: [f('こなかった')], te: [f('きて')], ta: [f('きた')], pot: [f('こられる'), f('これる')],
+      pass: [f('こられる')], caus: [f('こさせる')], cpass: [f('こさせられる')], vol: [f('こよう')], imp: [f('こい')], ba: [f('くれば')] };
+  }
+  const i = t.i;                                                // the ます-stem every polite form and たい build on
+  return {
+    masu: [i + 'ます'], masen: [i + 'ません'], mashita: [i + 'ました'], masendeshita: [i + 'ませんでした'], mashou: [i + 'ましょう'],
+    nai: t.nai, ta: t.ta, nakatta: t.nakatta, vol: t.vol, imp: t.imp,
+    te: t.te, teiru: t.te.flatMap(x => [x + 'いる', x + 'る']), // 書いてる: the い drops in speech
+    tara: t.ta.map(x => x + 'ら'), ba: t.ba, tai: [i + 'たい'],
+    pot: t.pot, pass: t.pass, caus: t.caus, cpass: t.cpass,
+  };
+}
+
+// All adjective forms of s. い-adjectives change their final い; な-adjectives and nouns add words after themselves.
+function adjTable(s, w) {
+  if (w.c === 'iadj') {
+    const b = w.ii ? s.slice(0, -2) + 'よ' : s.slice(0, -1);   // the stem: 高い → 高, but いい → よ (it conjugates from よい)
+    return { aNeg: [b + 'くない'], aPast: [b + 'かった'], aPastNeg: [b + 'くなかった'],
+      aPol: [s + 'です'], aPolNeg: [b + 'くないです', b + 'くありません'], aPolPast: [b + 'かったです'],
+      aPolPastNeg: [b + 'くなかったです', b + 'くありませんでした'], aTe: [b + 'くて'], aAdv: [b + 'く'], aBa: [b + 'ければ'] };
+  }
+  // な-adjectives and nouns: the word never changes. Every じゃ form also accepts the more formal では.
+  return { aNeg: [s + 'じゃない', s + 'ではない'], aPast: [s + 'だった'], aPastNeg: [s + 'じゃなかった', s + 'ではなかった'],
+    aPol: [s + 'です'], aPolNeg: [s + 'じゃないです', s + 'じゃありません', s + 'ではありません', s + 'ではないです'], aPolPast: [s + 'でした'],
+    aPolPastNeg: [s + 'じゃなかったです', s + 'じゃありませんでした', s + 'ではありませんでした', s + 'ではなかったです'],
+    aTe: [s + 'で'], aAdv: [s + 'に'], aBa: [s + 'なら', s + 'ならば'] };
+}
+
+const isVerb = w => ['godan', 'ichidan', 'suru', 'kuru'].includes(w.c);
+// Nouns take です / だ exactly like な-adjectives, so they share adjTable
+const table = (s, w) => isVerb(w) ? verbTable(s, w) : adjTable(s, w);
+
+// Negatives, past and polite on top of another form. Variant codes: n = negative, p = past, P = polite ('Pnp' = polite past negative)
+const VERBY = ['pot', 'pass', 'caus', 'cpass', 'teiru']; // end in る and conjugate again like an ichidan verb
+const NEG_ONLY = ['te', 'tara', 'ba', 'imp', 'aTe', 'aBa']; // have a negative but no tense or politeness of their own
+const ALL_MODS = ['n', 'p', 'np', 'P', 'Pn', 'Pp', 'Pnp'];
+// A question's id for stats and scheduling: the form, plus "~variant" when there is one ("pot~Pnp")
+const qid = (f, m) => m ? `${f}~${m}` : f;
+// The variant as words, in the order the tags show them: "Pnp" → Polite, Past, Negative
+const modWords = m => [m.includes('P') && 'Polite', m.includes('p') && 'Past', m.includes('n') && 'Negative'].filter(Boolean);
+// Every variant a form can have, whatever the Study settings say
+const allMods = f => VERBY.includes(f) || f === 'tai' ? ALL_MODS : NEG_ONLY.includes(f) ? ['n'] : [];
+// What replaces the final る of a VERBY form for each variant (書ける → 書けませんでした)
+const ICHIDAN_END = { n: 'ない', p: 'た', np: 'なかった', P: 'ます', Pn: 'ません', Pp: 'ました', Pnp: 'ませんでした' };
+// What replaces the final い of たい for each variant; the first of each list is the textbook answer
+const TAI_END = { n: ['くない'], p: ['かった'], np: ['くなかった'], P: ['いです'], Pn: ['くないです', 'くありません'],
+  Pp: ['かったです'], Pnp: ['くなかったです', 'くありませんでした'] };
+
+// Accepted answers for form f with variant m. Every accepted plain answer carries the variant along,
+// so 食べれる (accepted for the potential) also makes 食べれない accepted for the potential negative.
+function answers(s, w, f, m) {
+  const t = table(s, w);
+  if (!m) return t[f];                                          // no variant: the form itself
+  let out;
+  if (VERBY.includes(f)) {
+    // 書ける, 書かれる, 書いている… all end in る, so drop it and conjugate like an ichidan verb
+    out = t[f].map(x => x.slice(0, -1) + ICHIDAN_END[m]);
+  } else if (f === 'tai') {
+    // 食べたい conjugates like an い-adjective: drop い and add the adjective ending
+    out = t.tai.flatMap(x => TAI_END[m].map(e => x.slice(0, -1) + e));
+  } else {
+    // The only other variant is the negative, built from the plain negative minus its last kana
+    const nai = (t.nai || []).map(x => x.slice(0, -1)), aneg = (t.aNeg || []).map(x => x.slice(0, -1)); // 書かな, 高くな, 静かじゃな
+    out = {
+      te: () => nai.flatMap(x => [x + 'いで', x + 'くて']),     // 書かないで ("without writing") or 書かなくて ("not writing, so")
+      tara: () => t.nakatta.map(x => x + 'ら'),                // 書かなかったら
+      ba: () => nai.map(x => x + 'ければ'),                     // 書かなければ
+      imp: () => [s + 'な'],                                    // dictionary form + な: 書くな
+      aTe: () => aneg.map(x => x + 'くて'),                     // 高くなくて, 静かじゃなくて
+      aBa: () => w.c === 'iadj' ? aneg.map(x => x + 'ければ') : [s + 'じゃなければ', s + 'でなければ', s + 'じゃないなら'],
+    }[f]();
+  }
+  return [...new Set(out)];                                     // drop duplicates (two alternates can collapse into one)
+}
+
+// ---------- Forms ----------
+// Every concrete form id → [English name, Japanese name]. The English name is split into the colored tags.
+const FORMS = {
+  // Japanese names are grammar terms, never the ending itself, so they don't give the answer away
+  masu: ['Polite present', '丁寧・現在'], masen: ['Polite negative', '丁寧・否定'], mashita: ['Polite past', '丁寧・過去'],
+  masendeshita: ['Polite past negative', '丁寧・過去否定'], mashou: ['Polite volitional', '丁寧・意向'],
+  nai: ['Plain negative', '否定形'], ta: ['Plain past', '過去形'], nakatta: ['Plain past negative', '過去否定形'],
+  vol: ['Plain volitional', '意向形'], imp: ['Imperative', '命令形'],
+  te: ['て-form', 'て形'], teiru: ['Progressive (ている)', '進行形'], tara: ['たら conditional', '条件形'], ba: ['ば conditional', '仮定形'], tai: ['Want to', '願望形'],
+  pot: ['Potential', '可能形'], pass: ['Passive', '受身形'], caus: ['Causative', '使役形'], cpass: ['Causative-passive', '使役受身形'],
+  aNeg: ['Plain negative', '否定'], aPast: ['Plain past', '過去'], aPastNeg: ['Plain past negative', '過去否定'],
+  aPol: ['Polite present', '丁寧・現在'], aPolNeg: ['Polite negative', '丁寧・否定'], aPolPast: ['Polite past', '丁寧・過去'],
+  aPolPastNeg: ['Polite past negative', '丁寧・過去否定'], aTe: ['て-form', 'て形'], aAdv: ['Adverb', '連用形'], aBa: ['Conditional', '仮定形'],
+};
+// Every concrete form, grouped as the cheat sheet tables show them
+const VERB_GROUPS = [
+  ['Polite', ['masu', 'masen', 'mashita', 'masendeshita', 'mashou']],
+  ['Plain', ['nai', 'ta', 'nakatta', 'vol', 'imp']],
+  ['Linking and wishes', ['te', 'teiru', 'tara', 'ba', 'tai']],
+  ['Voice', ['pot', 'pass', 'caus', 'cpass']],
+];
+const ADJ_GROUPS = [
+  ['Plain', ['aNeg', 'aPast', 'aPastNeg']],
+  ['Polite', ['aPol', 'aPolNeg', 'aPolPast', 'aPolPastNeg']],
+  ['Other', ['aTe', 'aAdv', 'aBa']],
+];
+const VERB_FORMS = VERB_GROUPS.flatMap(g => g[1]);           // every verb form id
+const ADJ_FORMS = ADJ_GROUPS.flatMap(g => g[1]);             // every adjective / noun form id
+const CONCRETE = [...VERB_FORMS, ...ADJ_FORMS];
+
+// Study settings lists base forms. Each expands into concrete questions [form, variant, dimensions], and the
+// Versions filters (present/past, affirmative/negative, plain/polite) keep the ones whose dimensions they allow.
+// A form without a past, negative or polite version counts as present, affirmative or plain (the て-form is present).
+const dims = m => ({ pol: +m.includes('P'), past: +m.includes('p'), neg: +m.includes('n') }); // variant code → 0/1 flags
+const allVersions = f => ['', ...ALL_MODS].map(m => [f, m, dims(m)]);   // all eight tense × polarity × politeness versions
+const negPair = f => [[f, '', { neg: 0 }], [f, 'n', { neg: 1 }]];         // just the form and its negative
+// Base form → the concrete questions it can ask
+const BASES = {
+  basic: [['nai', '', dims('n')], ['ta', '', dims('p')], ['nakatta', '', dims('np')], ['masu', '', dims('P')],
+    ['masen', '', dims('Pn')], ['mashita', '', dims('Pp')], ['masendeshita', '', dims('Pnp')]],
+  vol: [['vol', '', { pol: 0 }], ['mashou', '', { pol: 1 }]],
+  imp: negPair('imp'), te: negPair('te'), teiru: allVersions('teiru'), tara: negPair('tara'), ba: negPair('ba'), tai: allVersions('tai'),
+  pot: allVersions('pot'), pass: allVersions('pass'), caus: allVersions('caus'), cpass: allVersions('cpass'),
+  aBasic: [['aNeg', '', dims('n')], ['aPast', '', dims('p')], ['aPastNeg', '', dims('np')], ['aPol', '', dims('P')],
+    ['aPolNeg', '', dims('Pn')], ['aPolPast', '', dims('Pp')], ['aPolPastNeg', '', dims('Pnp')]],
+  aTe: negPair('aTe'), aAdv: [['aAdv', '', {}]], aBa: negPair('aBa'),
+};
+// The chip labels and groups Study settings shows
+const BASE_NAMES = { basic: 'Basic forms', vol: 'Volitional', imp: 'Imperative', te: 'て-form', teiru: 'Progressive (ている)',
+  tara: 'たら conditional', ba: 'ば conditional', tai: 'Want to', pot: 'Potential', pass: 'Passive', caus: 'Causative',
+  cpass: 'Causative-passive', aBasic: 'Basic forms', aTe: 'て-form', aAdv: 'Adverb', aBa: 'Conditional' };
+const SETTINGS_VERB = [['Core', ['basic', 'vol', 'imp']], ['Linking and wishes', ['te', 'teiru', 'tara', 'ba', 'tai']],
+  ['Voice', ['pot', 'pass', 'caus', 'cpass']]];
+const SETTINGS_ADJ = [['Forms', ['aBasic', 'aTe', 'aAdv', 'aBa']]];
+// The Versions rows: [row name, [filter key, label], [filter key, label]]
+const FILTER_PAIRS = [['Tense', ['present', 'Present'], ['past', 'Past']], ['Polarity', ['aff', 'Affirmative'], ['neg', 'Negative']],
+  ['Speech', ['plain', 'Plain'], ['polite', 'Polite']]];
+// Does a question with these dimensions get past the filters F? A missing dimension counts as 0 (present, affirmative, plain).
+const passes = (d, F) => (d.pol ? F.polite : F.plain) && (d.past ? F.past : F.present) && (d.neg ? F.neg : F.aff);
+// The concrete questions the current Study settings allow, before word types are applied
+const questionSpecs = () => S.forms.flatMap(b => (BASES[b] || []).filter(([, , d]) => passes(d, S.filters)).map(([f, m]) => ({ base: b, f, m })));
+// The built-in presets: one-click form selections covering verbs and adjectives together
+const BUILTIN_PRESETS = [
+  ['Beginner set', ['basic', 'te', 'aBasic', 'aTe', 'aAdv', 'aBa']],
+  ['Every form', Object.keys(BASES)],
+  ['Deselect all', []],
+];
+// The forms a word marked lim still gets (the rest sound odd for verbs like ある or 分かる)
+const LIMITED = ['masu', 'masen', 'mashita', 'masendeshita', 'nai', 'ta', 'nakatta', 'te', 'tara', 'ba'];
+// Word types as Study settings lists them: [type key, label]
+const TYPES = [
+  ['godan', 'Godan verbs'], ['ichidan', 'Ichidan verbs'], ['irr', 'する and 来る'], ['iadj', 'い-adjectives'], ['naadj', 'な-adjectives'], ['noun', 'Nouns'],
+];
+const typeOf = w => (w.c === 'suru' || w.c === 'kuru') ? 'irr' : w.c; // する and 来る share one word-type chip
+
+// Can word w be asked in form f?
+function fits(w, f) {
+  if (isVerb(w) !== VERB_FORMS.includes(f)) return false;     // verb forms for verbs, adjective forms for the rest
+  if (w.lim && !LIMITED.includes(f)) return false;
+  if (w.no && w.no.includes(f)) return false;                  // e.g. no imperative for 死ぬ
+  if (w.c === 'noun' && f === 'aAdv') return false; // nouns have no adverb form
+  return true;
+}
+
+// ---------- Rule explanations ----------
+// い- or え-row + る: the shape of an ichidan verb. Godan verbs with this shape (帰る, 走る…) get a warning.
+const LOOKS_ICHIDAN = /[いきぎしじちぢにひびぴみりえけげせぜてでねへべぺめれ]る$/;
+// Wrap Japanese inside an English sentence so it gets the mincho font
+const J = s => `<span class="k" lang="ja">${s}</span>`;
+// "change the final く to か (あ-row)" for a godan verb; row is 0–4 for あ–お
+function stemPhrase(w, row) {
+  const e = w.r.slice(-1), to = ROWS[e] && ROWS[e][row];
+  const rowName = ['あ', 'い', 'う', 'え', 'お'][row];
+  let s = `change the final ${J(e)} to ${J(to)} (${rowName}-row)`;
+  if (row === 0 && e === 'う') s += `. Verbs ending in ${J('う')} use ${J('わ')} here, not ${J('あ')}`;
+  return s;
+}
+// How to build form f for word w, as one or two sentences of HTML (Hint 2 and "How it works").
+// withTypeNote: false when Hint 1 is already on screen and has said the verb only looks ichidan
+function ruleFor(w, f, withTypeNote = true) {
+  const c = w.c, e = w.r.slice(-1);                            // the word's class and last kana
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+  // Irregular verbs just state the result
+  const suru = x => `${J('する')} becomes ${J(x)}.`, kuru = x => `${J('くる')} becomes ${J(x)}. The kanji 来 stays; only its reading changes.`;
+  // Every form built on the ます-stem (ます, ません, ました, たい…) explains itself the same way
+  const masuStem = suf => c === 'godan' ? `${cap(stemPhrase(w, 1))}, then add ${J(suf)}.`
+    : c === 'ichidan' ? `Drop ${J('る')}, then add ${J(suf)}.`
+    : c === 'suru' ? suru('し' + suf) : kuru('き' + suf);
+  // The て-form rule, also used for the past (kind 'ta') since it's the same sound change
+  const teRule = (kind) => {
+    const swap = x => kind === 'ta' ? toTa(x) : x;
+    if (c === 'ichidan') return `Drop ${J('る')}, add ${J(swap('て'))}.`;
+    if (c === 'suru') return suru(swap('して'));
+    if (c === 'kuru') return kuru(swap('きて'));
+    if (w.iku) return `${J('行く')} is the one exception among ${J('く')} verbs: ${J(swap('いって'))}, not ${J(swap('いいて'))}.`;
+    return `Godan verbs ending in ${J(TE_GROUP[e])} take ${J(swap(TE[e]))}.` + (kind === 'ta' ? ` Same sound change as the て-form.` : '');
+  };
+  const ichiNote = c === 'godan' && LOOKS_ICHIDAN.test(w.r)
+    ? ` ${J(w.k)} looks like an ichidan verb, but it is godan.` : '';
+  // Verb forms return from the switch; adjective and noun forms fall through to the code after it
+  const out = (() => { switch (f) {
+    case 'masu': return masuStem('ます');
+    case 'masen': return masuStem('ません');
+    case 'mashita': return masuStem('ました');
+    case 'masendeshita': return masuStem('ませんでした');
+    case 'mashou': return masuStem('ましょう');
+    case 'tai': return masuStem('たい');
+    case 'nai': case 'nakatta': {
+      const suf = f === 'nai' ? 'ない' : 'なかった';
+      if (w.aru) return `${J('ある')} is irregular: its plain negative is just ${J(suf)}.`;
+      if (c === 'godan') return `${cap(stemPhrase(w, 0))}, then add ${J(suf)}.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J(suf)}.`;
+      return c === 'suru' ? suru('し' + suf) : kuru('こ' + suf);
+    }
+    case 'te': return teRule('te');
+    case 'teiru': return `Make the て-form, then add ${J('いる')}. ${teRule('te')} In speech the い often drops: ${J('〜てる')}.`;
+    case 'ta': return teRule('ta');
+    case 'tara': return `Take the plain past and add ${J('ら')}. ` + teRule('ta');
+    case 'ba':
+      if (c === 'godan') return `${cap(stemPhrase(w, 3))}, then add ${J('ば')}.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J('れば')}.`;
+      return c === 'suru' ? suru('すれば') : kuru('くれば');
+    case 'vol':
+      if (c === 'godan') return `${cap(stemPhrase(w, 4))}, then add ${J('う')}.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J('よう')}.`;
+      return c === 'suru' ? suru('しよう') : kuru('こよう');
+    case 'imp':
+      if (c === 'godan') return `${cap(stemPhrase(w, 3))}. That's the whole form.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J('ろ')}.`;
+      return c === 'suru' ? `${J('する')} becomes ${J('しろ')} (${J('せよ')} in writing).` : kuru('こい');
+    case 'pot':
+      if (c === 'godan') return `${cap(stemPhrase(w, 3))}, then add ${J('る')}. The result conjugates like an ichidan verb.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J('られる')}. The shorter ${J(w.r.slice(0, -1) + 'れる')} is common in speech and also accepted.`;
+      return c === 'suru' ? `${J('する')} has no potential of its own; it uses ${J('できる')}.` : `${J('くる')} becomes ${J('こられる')} (${J('これる')} in casual speech).`;
+    case 'pass':
+      if (c === 'godan') return `${cap(stemPhrase(w, 0))}, then add ${J('れる')}.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J('られる')}. Same shape as the potential.`;
+      return c === 'suru' ? suru('される') : kuru('こられる');
+    case 'caus':
+      if (c === 'godan') return `${cap(stemPhrase(w, 0))}, then add ${J('せる')}.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J('させる')}.`;
+      return c === 'suru' ? suru('させる') : kuru('こさせる');
+    case 'cpass':
+      if (c === 'godan' && e === 'す') return `Verbs ending in ${J('す')} only use the long form: ${J('さ')} + ${J('せられる')}.`;
+      if (c === 'godan') return `${cap(stemPhrase(w, 0))}, then add ${J('される')}. The long form with ${J('せられる')} is also accepted.`;
+      if (c === 'ichidan') return `Drop ${J('る')}, add ${J('させられる')}.`;
+      return c === 'suru' ? suru('させられる') : kuru('こさせられる');
+  }
+  // Adjectives and nouns
+  const iiNote = w.ii ? `${J(w.r)} conjugates from ${J(w.r.slice(0, -2) + 'よい')}, so the stem is ${J(w.r.slice(0, -2) + 'よ')}. ` : '';
+  if (c === 'iadj') {
+    const map = { aNeg: 'くない', aPast: 'かった', aPastNeg: 'くなかった', aPolNeg: 'くないです', aPolPast: 'かったです',
+      aPolPastNeg: 'くなかったです', aTe: 'くて', aAdv: 'く', aBa: 'ければ' };
+    if (f === 'aPol') return `Add ${J('です')} to the dictionary form. Never ${J('だ')} or ${J('でした')} after an い-adjective.`;
+    let s = iiNote + `Drop the final ${J('い')}, add ${J(map[f])}.`;
+    if (f === 'aPolNeg') s += ` ${J('くありません')} is the more formal option.`;
+    if (f === 'aPolPastNeg') s += ` ${J('くありませんでした')} is the more formal option.`;
+    if (f === 'aPolPast') s += ` Not ${J('でした')}: the past lives in the adjective itself.`;
+    return s;
+  }
+  const endsI = w.endsI ? ` ${J(w.r)} ends in ${J('い')} but is a な-adjective, so the い stays.` : '';
+  const na = {
+    aNeg: `Add ${J('じゃない')} (or the more formal ${J('ではない')}).`,
+    aPast: `Add ${J('だった')}.`,
+    aPastNeg: `Add ${J('じゃなかった')} (or ${J('ではなかった')}).`,
+    aPol: `Add ${J('です')}.`,
+    aPolNeg: `Add ${J('じゃありません')}, ${J('じゃないです')} or ${J('ではありません')}.`,
+    aPolPast: `Add ${J('でした')}.`,
+    aPolPastNeg: `Add ${J('じゃありませんでした')} or ${J('じゃなかったです')}.`,
+    aTe: `Add ${J('で')}.`,
+    aAdv: `Add ${J('に')}.`,
+    aBa: `Add ${J('なら')} (${J('ならば')} is also correct).`,
+  };
+  return na[f] + endsI;
+  })();
+  return out + (withTypeNote ? ichiNote : '');
+}
+
+// The exact word type for the tag above the word ("Godan verb · ends in く")
+function tagFor(w) {
+  if (w.c === 'godan') {
+    const e = w.r.slice(-1);
+    if (w.iku) return 'Godan verb · く, irregular て-form';
+    if (w.aru) return 'Godan verb · irregular negative';
+    return `Godan verb · ends in ${e}`;
+  }
+  if (w.c === 'ichidan') return 'Ichidan verb';
+  if (w.c === 'suru') return 'Irregular verb · する';
+  if (w.c === 'kuru') return 'Irregular verb · 来る';
+  if (w.c === 'iadj') return w.ii ? 'い-adjective · irregular' : 'い-adjective';
+  if (w.c === 'noun') return 'Noun';
+  return w.endsI ? 'な-adjective · ends in い' : 'な-adjective';
+}
+
+// ---------- Romaji to kana ----------
+// T maps romaji spellings (1–4 letters) to kana. Built row by row: row5('k', 'かきくけこ') adds ka, ki, ku, ke, ko.
+const T = { a:'あ', i:'い', u:'う', e:'え', o:'お', nn:'ん', "n'":'ん', '-':'ー' };
+const row5 = (c, k) => [...'aiueo'].forEach((v, j) => { T[c + v] = k[j]; });
+// l and x prefixes give small kana (la → ぁ), as on Japanese keyboards
+row5('k','かきくけこ'); row5('g','がぎぐげご'); row5('s','さしすせそ'); row5('z','ざじずぜぞ'); row5('t','たちつてと');
+row5('d','だぢづでど'); row5('n','なにぬねの'); row5('h','はひふへほ'); row5('b','ばびぶべぼ'); row5('p','ぱぴぷぺぽ');
+row5('m','まみむめも'); row5('r','らりるれろ'); row5('l','ぁぃぅぇぉ'); row5('x','ぁぃぅぇぉ');
+// Spellings that don't follow the rows: Hepburn (shi, chi, tsu, fu, ji), combined sounds and small kana
+Object.assign(T, {
+  fa:'ふぁ', fi:'ふぃ', fu:'ふ', fe:'ふぇ', fo:'ふぉ', ya:'や', yu:'ゆ', yo:'よ', wa:'わ', wo:'を', wi:'うぃ', we:'うぇ', vu:'ゔ',
+  shi:'し', chi:'ち', tsu:'つ', ji:'じ', ja:'じゃ', ju:'じゅ', jo:'じょ', je:'じぇ',
+  sha:'しゃ', shu:'しゅ', sho:'しょ', she:'しぇ', cha:'ちゃ', chu:'ちゅ', cho:'ちょ', che:'ちぇ',
+  lya:'ゃ', lyu:'ゅ', lyo:'ょ', xya:'ゃ', xyu:'ゅ', xyo:'ょ', ltu:'っ', xtu:'っ', ltsu:'っ', xtsu:'っ', lwa:'ゎ', xwa:'ゎ',
+});
+// kya, sho, chu…: a consonant + y + vowel is the い-row kana plus a small ゃ/ゅ/ょ
+for (const [c, k] of Object.entries({ k:'き', g:'ぎ', s:'し', z:'じ', j:'じ', t:'ち', c:'ち', d:'ぢ', n:'に', h:'ひ', b:'び', p:'ぴ', m:'み', r:'り' })) {
+  T[c + 'ya'] = k + 'ゃ'; T[c + 'yu'] = k + 'ゅ'; T[c + 'yo'] = k + 'ょ';
+}
+
+// Convert the romaji in str to hiragana, leaving kana and anything else alone. While typing (final = false) a
+// trailing n stays as n, because the next letter decides between ん and な/に/…; on submit (final = true) it becomes ん.
+function toKana(str, final) {
+  const s = str.toLowerCase();
+  let out = '', i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (!/[a-z'\-]/.test(c)) { out += c; i++; continue; }      // not romaji (kana, kanji, spaces): copy it through
+    // A doubled consonant (kk, tt, tch) is a small っ before the second one
+    if (c !== 'n' && /[bcdfghjkmpqrstvwxyz]/.test(c) && (s[i + 1] === c || (c === 't' && s[i + 1] === 'c'))) { out += 'っ'; i++; continue; }
+    // Otherwise take the longest spelling in T that matches here (so "sha" wins over "s")
+    let hit = false;
+    for (let L = Math.min(4, s.length - i); L > 0; L--) {
+      const k = T[s.slice(i, i + L)];
+      if (k) { out += k; i += L; hit = true; break; }
+    }
+    if (hit) continue;
+    if (c === 'n' && i + 1 < s.length && !/[aiueoy']/.test(s[i + 1])) { out += 'ん'; i++; continue; } // n before a consonant
+    if (c === 'n' && i + 1 === s.length && final) { out += 'ん'; i++; continue; }                  // n at the very end
+    out += c; i++;                                               // an unfinished spelling ("k" so far) waits for more letters
+  }
+  return out;
+}
+// Katakana → hiragana: the two blocks sit 0x60 apart in Unicode
+const kataToHira = s => s.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+// Normalize an answer for comparison: romaji to kana, katakana to hiragana, no spaces or punctuation
+const norm = s => kataToHira(toKana(s.trim(), true)).replace(/[\s　。、.,!！?？]/g, '');
+
+// ---------- Display helpers ----------
+// Escape text before putting it into HTML
+const esc = s => s.replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch]));
+// Split kanji text into the ruby base, its reading, and the kana tail they share: 書きます / かきます → 書, か, きます
+function splitRuby(k, r) {
+  let n = 0;
+  while (n < k.length && n < r.length && k[k.length - 1 - n] === r[r.length - 1 - n]) n++; // count the shared ending
+  return { base: k.slice(0, k.length - n), rt: r.slice(0, r.length - n), tail: k.slice(k.length - n) };
+}
+// Kanji with furigana over just the kanji part (kana-only words come back unchanged)
+function ruby(k, r) {
+  if (k === r) return esc(k);
+  const { base, rt, tail } = splitRuby(k, r);
+  return `<ruby>${esc(base)}<rt>${esc(rt)}</rt></ruby>${esc(tail)}`;
+}
+// A word's conjugated form f, with furigana
+const formRuby = (w, f) => ruby(table(w.k, w)[f][0], table(w.r, w)[f][0]);
+
+// Split a form name into colored tags so politeness, tense and polarity read at a glance: "Polite past negative"
+// becomes three tags; a name with none of those words ("Potential") stays one neutral tag.
+const SEG = { polite: 'polite', past: 'past', negative: 'neg' };  // word → tag color class
+const formLabel = label => {
+  const words = label.split(' ');
+  if (!words.some(x => SEG[x.toLowerCase()])) return `<span class="seg">${esc(label)}</span>`;
+  return words.map(x => `<span class="seg ${SEG[x.toLowerCase()] || ''}">${esc(x[0].toUpperCase() + x.slice(1))}</span>`).join('');
+};
+
+// A question's form as colored tags, its Japanese name, and a plain-text name; m adds negative / past / polite
+const qLabel = (f, m) => formLabel(FORMS[f][0]) + (m ? modWords(m).map(x => `<span class="seg ${SEG[x.toLowerCase()]}">${x}</span>`).join('') : '');
+const qJp = (f, m) => [FORMS[f][1], ...(m ? modWords(m).map(x => ({ Polite: '丁寧', Past: '過去', Negative: '否定' })[x]) : [])].join('・');
+const qName = (f, m) => FORMS[f][0] + (m ? ' ' + modWords(m).join(' ').toLowerCase() : '');
+
+// The rule for a form plus whatever variant sits on top of it: the form's own rule, then one sentence for the variant
+function ruleForQ(w, f, m, withTypeNote = true) {
+  if (!m) return ruleFor(w, f, withTypeNote);
+  if (VERBY.includes(f)) {
+    return `${ruleFor(w, f, withTypeNote)} Then conjugate the result like an ichidan verb: drop ${J('る')} and add ${J(ICHIDAN_END[m])}.`;
+  }
+  if (f === 'tai') return `${ruleFor(w, f, withTypeNote)} Then treat ${J('たい')} like an い-adjective: ${J('た' + TAI_END[m][0])}.`;
+  if (f === 'imp') return `A negative command is just the dictionary form plus ${J('な')}.`;
+  // The other negatives all start from the plain negative, so explain that first
+  return ruleFor(w, isVerb(w) ? 'nai' : 'aNeg', withTypeNote) + ' ' + {
+    te: `Then add ${J('で')} for ${J('ないで')} ("without…"; ${J('ないでください')} is "please don't"), or change ${J('ない')} to ${J('なくて')} ("not…, so").`,
+    tara: `Then make it past and add ${J('ら')}: ${J('なかったら')}.`,
+    ba: `Then change ${J('ない')} to ${J('なければ')}. Add ${J('ならない')} after it and it means "must".`,
+    aTe: `Then change ${J('ない')} to ${J('なくて')}.`,
+    aBa: w.c === 'iadj' ? `Then change ${J('ない')} to ${J('なければ')}.` : `For the conditional, use ${J('じゃなければ')} or ${J('でなければ')}.`,
+  }[f];
+}
+
+// The conjugated answer (ak/ar) with everything that differs from the dictionary form (k/r) in red, for the third miss
+function rubyDiff(k, r, ak, ar) {
+  const red = s => s ? `<span class="chg">${esc(s)}</span>` : '';
+  let p = 0;
+  while (p < k.length && p < ak.length && k[p] === ak[p]) p++;  // p = how many characters stayed the same
+  if (ak === ar) return esc(ak.slice(0, p)) + red(ak.slice(p)); // kana-only word: no furigana to worry about
+  const d = splitRuby(k, r), a = splitRuby(ak, ar);
+  if (p < a.base.length) return `<ruby>${red(a.base)}<rt class="chg">${esc(a.rt)}</rt></ruby>${red(a.tail)}`; // the kanji itself changed
+  // The kanji stayed; color its reading only if that changed (来る → 来ない reads こ), then the changed tail
+  const keep = p - a.base.length;
+  return `<ruby>${esc(a.base)}<rt${a.rt !== d.rt ? ' class="chg"' : ''}>${esc(a.rt)}</rt></ruby>` +
+    esc(a.tail.slice(0, keep)) + red(a.tail.slice(keep));
+}
+
+// ---------- English prompts (Translate from English) ----------
+// Each word's English meaning ("to write") is conjugated into a short phrase ("I didn't write") for the question.
+// Irregular English verbs: [past, past participle]
+const EN_IRREG = { meet: ['met', 'met'], buy: ['bought', 'bought'], say: ['said', 'said'], hold: ['held', 'held'], stand: ['stood', 'stood'],
+  go: ['went', 'gone'], run: ['ran', 'run'], come: ['came', 'come'], cut: ['cut', 'cut'], understand: ['understood', 'understood'],
+  make: ['made', 'made'], ride: ['rode', 'ridden'], take: ['took', 'taken'], write: ['wrote', 'written'], swim: ['swam', 'swum'],
+  speak: ['spoke', 'spoken'], lend: ['lent', 'lent'], fly: ['flew', 'flown'], read: ['read', 'read'], drink: ['drank', 'drunk'],
+  eat: ['ate', 'eaten'], see: ['saw', 'seen'], wake: ['woke', 'woken'], sleep: ['slept', 'slept'], teach: ['taught', 'taught'],
+  wear: ['wore', 'worn'], leave: ['left', 'left'], forget: ['forgot', 'forgotten'], begin: ['began', 'begun'], get: ['got', 'gotten'],
+  do: ['did', 'done'], drive: ['drove', 'driven'], sing: ['sang', 'sung'], pay: ['paid', 'paid'], think: ['thought', 'thought'],
+  win: ['won', 'won'], hit: ['hit', 'hit'], grow: ['grew', 'grown'], sit: ['sat', 'sat'], send: ['sent', 'sent'], put: ['put', 'put'],
+  give: ['gave', 'given'], choose: ['chose', 'chosen'], steal: ['stole', 'stolen'], fall: ['fell', 'fallen'], show: ['showed', 'shown'],
+  throw: ['threw', 'thrown'] };
+const EN_DOUBLE = ['stop', 'chat', 'slip', 'grip', 'wrap'];   // regular verbs that double their last letter: stopped
+// Verbs without an object; their passive reads as "have someone … on you", the Japanese suffering passive
+const EN_INTRANS = ['go', 'come', 'run', 'walk', 'swim', 'die', 'exist', 'stand', 'sit', 'sleep', 'wake', 'fly', 'rest', 'live', 'arrive',
+  'cry', 'laugh', 'hurry', 'enter', 'get', 'be', 'end', 'decrease', 'slip', 'bloom', 'line', 'grow', 'fall', 'differ', 'work', 'play',
+  'chat', 'turn', 'advance', 'leave'];
+// Past tense: irregular table, else stopped / closed / worried / walked
+const enPast = v => EN_IRREG[v] ? EN_IRREG[v][0] : EN_DOUBLE.includes(v) ? v + v.slice(-1) + 'ed'
+  : /e$/.test(v) ? v + 'd' : /[^aeiou]y$/.test(v) ? v.slice(0, -1) + 'ied' : v + 'ed';
+const enPP = v => EN_IRREG[v] ? EN_IRREG[v][1] : enPast(v);   // past participle: written, stopped
+const EN_ING_DOUBLE = ['run', 'swim', 'sit', 'get', 'hit', 'cut', 'put', 'win', 'stop', 'begin', 'forget', 'chat', 'slip', 'grip', 'wrap'];
+// -ing form: being / dying / running / writing / seeing / eating
+const enIng = v => v === 'be' ? 'being' : /ie$/.test(v) ? v.slice(0, -2) + 'ying' : EN_ING_DOUBLE.includes(v) ? v + v.slice(-1) + 'ing'
+  : /[^e]e$/.test(v) ? v.slice(0, -1) + 'ing' : v + 'ing';
+// First sense of a meaning: "to bake, grill" → "bake"; commas inside brackets stay
+const firstSense = m => m.replace(/^to /, '').split(/;|,(?![^(]*\))/)[0].trim();
+// English can't show politeness, so forms with a register get a tag
+const POLITE = ['masu', 'masen', 'mashita', 'masendeshita', 'mashou', 'aPol', 'aPolNeg', 'aPolPast', 'aPolPastNeg'];
+const CASUAL = ['nai', 'ta', 'nakatta', 'vol', 'imp', 'tai', 'pot', 'pass', 'caus', 'cpass', 'teiru', 'aNeg', 'aPast', 'aPastNeg'];
+
+// The English phrase for word w in form f with variant m: "I didn't write", "if it isn't expensive"…
+function enPhrase(w, f, m = '') {
+  const s = firstSense(w.m);
+  // Adjectives and nouns: "isn't expensive", "was a student"…
+  if (!isVerb(w) && m) return { aTe: `not ${s}, and…`, aBa: `if it isn't ${s}` }[f];
+  if (!isVerb(w)) return {
+    aNeg: `isn't ${s}`, aPast: `was ${s}`, aPastNeg: `wasn't ${s}`, aPol: `is ${s}`, aPolNeg: `isn't ${s}`,
+    aPolPast: `was ${s}`, aPolPastNeg: `wasn't ${s}`, aTe: `${s} and…`, aAdv: `“${s}” as an adverb (the form used before なる)`,
+    aBa: `if it's ${s}`,
+  }[f];
+  // Verbs: split "take off (clothes)" into the verb (take) and the rest ( off (clothes)), then conjugate the verb
+  const sp = s.indexOf(' '), v = sp < 0 ? s : s.slice(0, sp), rest = sp < 0 ? '' : s.slice(sp);
+  const be = v === 'be', base = v + rest;                      // "be late" needs am/was instead of do/did
+  const pres = be ? 'am' + rest : base, past = be ? 'was' + rest : enPast(v) + rest;
+  const neg = be ? 'am not' + rest : `don't ${base}`, pastNeg = be ? "wasn't" + rest : `didn't ${base}`;
+  const intrans = rest.includes('(by itself)') || (EN_INTRANS.includes(v) && !/\((someone|an instrument)\)/.test(rest));
+  // Passives drop "(someone)"/"(something)" placeholders and move other bracketed notes to the end
+  const bare = rest.replace(/\s\([^)]*\)/g, '');
+  const notes = (rest.match(/\s\([^)]*\)/g) || []).filter(p => !/\((someone|something|by itself)\)/.test(p)).join('');
+  const ing = enIng(v) + rest, pp = enPP(v) + bare, them = v + bare;
+  if (m) {
+    const n = m.includes('n'), p = m.includes('p');
+    // Pick the present / negative / past / past-negative wording for this variant (politeness gets a tag instead)
+    const tense = (now, not, then, notThen) => p ? (n ? notThen : then) : (n ? not : now);
+    return {
+      pot: tense(`I can ${base}`, `I can't ${base}`, `I could ${base}`, `I couldn't ${base}`),
+      pass: intrans
+        ? tense(`I have someone ${them} on me`, `I don't have someone ${them} on me`, `I had someone ${them} on me`, `I didn't have someone ${them} on me`) + `${notes} (passive)`
+        : tense(`it's ${pp} by someone`, `it isn't ${pp} by someone`, `it was ${pp} by someone`, `it wasn't ${pp} by someone`) + notes,
+      caus: tense(`I make or let someone ${base}`, `I don't make or let someone ${base}`, `I made or let someone ${base}`, `I didn't make or let someone ${base}`),
+      cpass: tense(`I'm made to ${base}`, `I'm not made to ${base}`, `I was made to ${base}`, `I wasn't made to ${base}`),
+      teiru: tense(`I'm ${ing}`, `I'm not ${ing}`, `I was ${ing}`, `I wasn't ${ing}`),
+      tai: tense(`I want to ${base}`, `I don't want to ${base}`, `I wanted to ${base}`, `I didn't want to ${base}`),
+      te: `without ${ing}…`, tara: `if I ${neg}… (たら)`, ba: `if I ${neg}… (ば)`, imp: `Don't ${base}!`,
+    }[f];
+  }
+  return {
+    teiru: `I'm ${ing}`,
+    masu: `I ${pres}`, masen: `I ${neg}`, mashita: `I ${past}`, masendeshita: `I ${pastNeg}`, mashou: `Let's ${base}`,
+    nai: `I ${neg}`, ta: `I ${past}`, nakatta: `I ${pastNeg}`, vol: `Let's ${base}`, imp: `${base[0].toUpperCase() + base.slice(1)}!`,
+    te: `${base} and…`, tara: `once I ${pres}… (たら)`, ba: `if I ${pres}… (ば)`, tai: `I want to ${base}`, pot: `I can ${base}`,
+    pass: intrans ? `have someone ${them} on you${notes} (passive)` : `be ${pp} by someone${notes}`,
+    caus: `make or let someone ${base}`, cpass: `be made to ${base}`,
+  }[f];
+}
+// The prompt line in Translate mode: the phrase plus a Polite or Casual tag where Japanese politeness matters
+function enPrompt(w, f, m = '') {
+  const reg = POLITE.includes(f) || m.includes('P') ? '<span class="seg polite">Polite</span>'
+    : CASUAL.includes(f) ? '<span class="seg">Casual</span>' : '';
+  return `<span class="en-target">${esc(enPhrase(w, f, m))}</span>${reg}`;
+}
+
+// ---------- Reading a wrong answer ----------
+// What a wrong answer actually is: another real form of the word, the right form for a different word class,
+// or the wrong godan て-form sound change. Returns an explanation, or '' when it's none of these.
+function diagnose(w, f, m, given) {
+  const hit = list => list && list.some(a => norm(a) === given);                          // does given match any answer in list?
+  const both = (ww, g, mm) => hit(answers(w.r, ww, g, mm)) || hit(answers(w.k, ww, g, mm)); // …in kana or kanji spelling
+  const name = (g, mm) => `<b>${qName(g, mm)}</b>`;
+  // Another real form of this word, including this form with a different negative / past / polite
+  for (const g of Object.keys(table(w.r, w))) {
+    for (const mm of ['', ...allMods(g)]) {
+      if ((g !== f || mm !== m) && both(w, g, mm)) return `${J(given)} is the ${name(g, mm)} form, not the ${name(f, m)}.`;
+    }
+  }
+  // The right ending for the wrong word class: conjugate the word as if it were another class and compare
+  const CLS = { godan: 'a godan verb', ichidan: 'an ichidan verb', iadj: 'an い-adjective', naadj: 'a な-adjective', noun: 'a noun' };
+  const others = { godan: w.r.endsWith('る') ? ['ichidan'] : [], ichidan: ['godan'], suru: ['godan'], kuru: ['godan', 'ichidan'],
+    iadj: ['naadj'], naadj: w.endsI ? ['iadj'] : [] }[w.c] || [];
+  for (const c of others) {
+    const fake = { ...w, c, iku: 0, aru: 0, ii: 0 };           // the same word, reclassified, without its quirks
+    if (both(fake, f, m)) {
+      const real = w.c === 'suru' || w.c === 'kuru' ? 'irregular' : CLS[w.c];
+      return `That's how ${CLS[c]} would do it. ${J(w.k)} is ${real}.`;
+    }
+  }
+  const ans = answers(w.r, w, f, m)[0];                        // the textbook answer in kana
+  // Ichidan: kept the る
+  if (w.c === 'ichidan' && norm(w.r + ans.slice(w.r.length - 1)) === given) return `Ichidan verbs drop ${J('る')} before adding the ending.`;
+  // Godan: the right ending on the wrong row of the kana chart
+  if (w.c === 'godan' && !w.aru && (m || !['te', 'ta', 'tara'].includes(f))) {
+    const e = w.r.slice(-1), b = w.r.slice(0, -1), at = ROWS[e].indexOf(ans[b.length]); // at = the row the answer uses
+    const rowName = i => ['あ', 'い', 'う', 'え', 'お'][i] + '-row';
+    if (at >= 0) {
+      // Try the same answer with each other row's kana swapped in
+      if (e === 'う' && at === 0 && norm(b + 'あ' + ans.slice(b.length + 1)) === given) return `Verbs ending in ${J('う')} use ${J('わ')} here, not ${J('あ')}.`;
+      for (let i = 0; i < 5; i++) {
+        if (i !== at && norm(b + ROWS[e][i] + ans.slice(b.length + 1)) === given)
+          return `You used the ${rowName(i)} (${J(ROWS[e][i])}). This form takes the ${rowName(at)}: ${J(ROWS[e][at])}.`;
+      }
+    }
+  }
+  // Godan て / た / たら: the sound change that belongs to a different ending (書って instead of 書いて)
+  if (w.c === 'godan' && !m && ['te', 'ta', 'tara'].includes(f)) {
+    const e = w.r.slice(-1), right = w.iku ? 'って' : TE[e];
+    for (const e2 of Object.keys(TE)) {
+      if (TE[e2] === right) continue;
+      const end = f === 'te' ? TE[e2] : f === 'ta' ? toTa(TE[e2]) : toTa(TE[e2]) + 'ら';
+      if (norm(w.r.slice(0, -1) + end) === given || norm(w.k.slice(0, -1) + end) === given) {
+        return `${J(TE[e2])} is the sound change for verbs ending in ${J(TE_GROUP[e2])}. ` +
+          (w.iku ? `${J('行く')} is the exception: ${J('って')}.` : `Verbs ending in ${J(e)} take ${J(right)}.`);
+      }
+    }
+  }
+  return '';
+}
+
+// One slip of the fingers rather than a grammar mistake: a leftover romaji letter, a big kana for a small one (つ/っ),
+// a doubled kana, or one wrong kana in the part of the word that doesn't conjugate
+const SMALL = { 'っ':'つ', 'ゃ':'や', 'ゅ':'ゆ', 'ょ':'よ', 'ぁ':'あ', 'ぃ':'い', 'ぅ':'う', 'ぇ':'え', 'ぉ':'お' };
+function isTypo(given, w, A) {
+  // Compare against every accepted answer, kana and kanji, each paired with the dictionary form in the same spelling
+  const tries = [...A.kana.map(a => [norm(a), w.r]), ...A.kanji.map(a => [norm(a), w.k])];
+  for (const [ans, dict] of tries) {
+    if (Math.abs(ans.length - given.length) > 1) continue;     // more than one kana added or missing: not a typo
+    let i = 0;                                                 // i = where the two strings start to differ…
+    while (i < ans.length && i < given.length && ans[i] === given[i]) i++;
+    let j = 0;                                                 // …and j = how much matches at the end
+    while (j < ans.length - i && j < given.length - i && ans[ans.length - 1 - j] === given[given.length - 1 - j]) j++;
+    const typed = given.slice(i, given.length - j), want = ans.slice(i, ans.length - j); // the one differing kana
+    if (typed.length > 1 || want.length > 1) continue;
+    let stem = 0;                                              // how much of the answer is unchanged dictionary form
+    while (stem < dict.length && dict[stem] === ans[stem]) stem++;
+    if (w.c !== 'naadj' && w.c !== 'noun') stem = Math.min(stem, dict.length - 1); // a verb or い-adjective conjugates from its last kana
+    if (/[a-z]/.test(typed)                                    // a leftover romaji letter
+      || SMALL[typed] === want || SMALL[want] === typed        // つ for っ, よ for ょ…
+      || (!want && (typed === given[i - 1] || typed === given[i + 1])) // a kana typed twice
+      || i < stem) return true;                                // a slip in the part that doesn't conjugate
+  }
+  return false;
+}
+
+// ---------- State ----------
+// Everything that should survive a reload lives in S and is saved to this browser's localStorage under KEY.
+const KEY = 'katsuyo.v1';
+const defaults = () => ({
+  types: TYPES.map(t => t[0]), forms: [...BUILTIN_PRESETS[0][1]], // base forms (keys of BASES); starts on the beginner set
+  filters: { present: true, past: true, aff: true, neg: true, plain: true, polite: true }, // Versions: which of each pair to include
+  furigana: true, meaning: true, showType: false, stats: {}, best: 0, cheatZoom: 100,
+  seen: {}, // times each word has been asked, so every word gets a turn before any repeats
+  prompt: 'form', // 'form' names the grammar form; 'meaning' gives an English phrase to put into Japanese
+  srs: {}, // review schedule per pattern (word class + form): { s: stability in days, due, n, last }
+  speed: { avg: 1, n: 0 }, // usual answer time relative to answer length, to spot slow-but-correct answers
+  presets: [], // your saved setups: { name, forms, filters, types, prompt }
+  timer: false, // show the study timer
+  time: { total: 0, days: {} }, // active study time in ms: in all, and per local date ('2026-10-31')
+});
+let S = defaults();
+// Load the saved state on top of the defaults, so settings added since it was saved get their default value.
+// Storage can be missing or blocked (private windows), so every read and write is allowed to fail quietly.
+try { const saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) S = { ...S, ...saved }; } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+// Older saves picked one chip per concrete form (masu, aPast…); fold those into their base forms, and drop
+// anything no longer offered along with the old Variations switches
+const OLD_TO_BASE = { masu: 'basic', masen: 'basic', mashita: 'basic', masendeshita: 'basic', nai: 'basic', ta: 'basic', nakatta: 'basic',
+  mashou: 'vol', aNeg: 'aBasic', aPast: 'aBasic', aPastNeg: 'aBasic', aPol: 'aBasic', aPolNeg: 'aBasic', aPolPast: 'aBasic', aPolPastNeg: 'aBasic' };
+S.forms = [...new Set(S.forms.map(f => OLD_TO_BASE[f] || f))].filter(f => BASES[f]);
+S.filters = { ...defaults().filters, ...S.filters };           // fill in any filter missing from an older save
+delete S.neg; delete S.tp;
+
+// This session only (not saved): the tally under the drill, and the current question's progress
+const session = { n: 0, ok: 0, streak: 0 };
+let qn = 0, cur = null, answered = false;   // questions finished so far, the current question { w, f, m, base, kind }, and whether it's done
+let attempts = 0, tried = [], diag = ''; // wrong tries on the current question, and what the last one got wrong
+let shownAt = 0, typoUsed = false; // when the current question appeared; whether its one free typo fix is spent
+const loop = new Map(); // missed patterns retried this session: key → { step, due (question number), w (word last asked) }
+const recent = []; // word indices shown lately, kept out of rotation for a while
+
+// The Score record for one form (and variant): n answers, ok first-try answers, and how each answer went —
+// c0 first try, c1 after one hint, c2 after two hints, cx answer shown. Older saves only had n/ok, so their misses count as cx.
+function statFor(f) {
+  const st = S.stats[f] || (S.stats[f] = { n: 0, ok: 0 });
+  if (st.c0 == null) Object.assign(st, { c0: st.ok, c1: 0, c2: 0, cx: st.n - st.ok });
+  return st;
+}
+// First try earns full marks, each hint costs a third, a shown answer earns nothing
+const formScore = st => (st.c0 + st.c1 * 2 / 3 + st.c2 / 3) / st.n;
+
+// Every possible question: word × each concrete form and variant the Study settings allow
+function pool() {
+  const out = [], specs = questionSpecs();
+  WORDS.forEach((w, wi) => {
+    if (!S.types.includes(typeOf(w))) return;                  // word type switched off in Study settings
+    for (const q of specs) if (fits(w, q.f)) out.push({ w: wi, ...q }); // w is the word's index in WORDS
+  });
+  return out;
+}
+
+const DAY = 864e5;                                              // one day in milliseconds
+// The rule a question exercises: word class (godan split by ending) plus form and variant. Reviews are scheduled per pattern.
+// e.g. "gく:te" is every godan く-verb in the て-form; 行く, ある and いい get their own patterns because of their quirks.
+function patKey(w, f, m = '') {
+  const cls = w.c === 'godan' ? (w.iku ? 'iku' : w.aru ? 'aru' : 'g' + w.r.slice(-1)) : w.ii ? 'ii' : w.c;
+  return cls + ':' + qid(f, m);
+}
+// Forms that are easy to mix up; now and then one is asked right after the other, with the same word
+const CONTRAST = { pot: ['pass'], pass: ['pot', 'caus'], caus: ['pass', 'cpass'], cpass: ['caus'],
+  ba: ['tara'], tara: ['ba'], te: ['ta'], ta: ['te'], vol: ['mashou'], mashou: ['vol'] };
+const LOOP_GAPS = [2, 6, 15]; // questions until a missed pattern comes back, per clean retry
+const SPECIAL_BOOST = 2;      // the smallest word count a pattern is weighted as, so one-word patterns (行く, 来る) aren't rare
+const rand = a => a[Math.floor(Math.random() * a.length)];      // a random item
+// A random item where items[j] is ws[j] times as likely as an item of weight 1
+const wpick = (items, ws) => {
+  let r = Math.random() * ws.reduce((a, b) => a + b, 0);
+  for (let j = 0; j < items.length; j++) { r -= ws[j]; if (r <= 0) return items[j]; }
+  return items[items.length - 1];
+};
+
+// Spaced review: a clean answer pushes a pattern's next review out (1 day, then ×2.5; a slow one only ×1.3),
+// a miss brings it back. Repeats within the same stretch don't stack, so one long session can't inflate the gap.
+// q is 'good' (clean), 'hard' (clean but slow or typo-fixed) or 'again' (hints used or answer shown).
+function schedule(key, q) {
+  const now = Date.now(), c = S.srs[key] || { s: 0, n: 0, last: 0 }; // s = days until the next review
+  const settled = !c.s || now - c.last >= c.s * DAY / 2;      // only grow the gap if enough time has passed since the last answer
+  if (q === 'again') { c.s = 0; c.due = now; }                 // missed: due again right away (next session)
+  else if (settled) { c.s = c.s ? c.s * (q === 'good' ? 2.5 : 1.3) : (q === 'good' ? 1 : .5); c.due = now + c.s * DAY; }
+  c.n++; c.last = now;
+  S.srs[key] = c;
+}
+// A missed pattern returns after 2, 6, then 15 questions; it leaves the loop after three clean answers in a row
+function loopUpdate(key, q, wi) {
+  const it = loop.get(key);
+  if (q === 'again') loop.set(key, { step: 0, due: qn + LOOP_GAPS[0], w: wi });                 // (re)start the loop
+  else if (it && it.step + 1 >= LOOP_GAPS.length) loop.delete(key);                              // third clean answer: done
+  else if (it) loop.set(key, { step: it.step + 1, due: qn + LOOP_GAPS[it.step + 1], w: wi });   // clean: next, longer gap
+}
+// A correct answer that took much longer than usual for its length counts as shaky
+function isSlow(ms, ans) {
+  if (ms > 60000) return false; // probably stepped away
+  const ratio = ms / (1500 + 450 * ans.length), sp = S.speed;  // time compared with what an answer this long should take
+  const slow = sp.n < 8 ? ratio > 2 : ratio > 1.6 * sp.avg;    // until there are 8 samples, use a fixed bar; then your own average
+  if (!slow) { sp.avg = sp.n ? sp.avg * .9 + ratio * .1 : ratio; sp.n++; } // a running average of your normal pace
+  return slow;
+}
+
+// Choose the next question. In order: a missed pattern that's due back, now and then a deliberate contrast,
+// a pattern due for spaced review, or else something new or close to due.
+function pick() {
+  const P = pool();
+  if (!P.length) return null;
+  const now = Date.now(), prev = cur, prevKey = prev && patKey(WORDS[prev.w], prev.f, prev.m);
+  const byKey = new Map();                                     // pattern → all the questions that exercise it
+  for (const p of P) { const k = patKey(WORDS[p.w], p.f, p.m); if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(p); }
+
+  // Deal words like a shuffled deck: least-seen first, never one from the last several questions
+  const lim = Math.min(15, Math.floor(new Set(P.map(p => p.w)).size / 2)); // how many recent words to keep out of rotation
+  while (recent.length > lim) recent.shift();
+  const seen = p => S.seen[WORDS[p.w].k] || 0;
+  // Of the candidate questions, one whose word isn't `avoid` or recent and has been seen least; relax those rules if nothing's left
+  const wordFor = (cands, avoid) => {
+    let c = cands.filter(p => p.w !== avoid && !recent.includes(p.w));
+    if (!c.length) c = cands.filter(p => p.w !== avoid);
+    if (!c.length) c = cands;
+    const least = Math.min(...c.map(seen));
+    return rand(c.filter(p => seen(p) === least));
+  };
+
+  // 1. A missed pattern comes back on schedule, with a different word each time
+  for (const k of loop.keys()) if (!byKey.has(k)) loop.delete(k); // forget retries the Study settings no longer allow
+  const back = [...loop].find(([k, it]) => it.due <= qn && k !== prevKey);
+  if (back) return { ...wordFor(byKey.get(back[0]), back[1].w), kind: 'review' };
+
+  // 2. Sometimes set up a contrast with the last question: a look-alike word, or a form it's easy to confuse with.
+  //    Never right after another contrast, or one word can bounce between て-form and past several times in a row.
+  if (prev && prev.kind !== 'compare' && Math.random() < .3) {
+    const pw = WORDS[prev.w];
+    const opts = [
+      // a word with the same reading but a different class (着る ↔ 切る), in the same form
+      ...P.filter(p => p.f === prev.f && p.m === prev.m && WORDS[p.w].r === pw.r && WORDS[p.w].c !== pw.c),
+      // the same word in a form that's easy to confuse with the last one (potential ↔ passive)
+      ...(CONTRAST[prev.f] || []).map(f => P.find(p => p.w === prev.w && p.f === f && p.m === prev.m)).filter(Boolean),
+    ];
+    if (opts.length) return { ...rand(opts), kind: 'compare' };
+  }
+
+  // 3. Patterns due for review, most overdue first
+  const due = [...byKey.keys()].filter(k => S.srs[k] && S.srs[k].due <= now && k !== prevKey && !loop.has(k))
+    .sort((a, b) => S.srs[a].due - S.srs[b].due);
+  if (due.length) return { ...wordFor(byKey.get(rand(due.slice(0, 3))), prev && prev.w), kind: 'due' }; // one of the 3 most overdue
+
+  // 4. Otherwise pick a base form (weighted by the square root of how many versions it has, so Basic forms with
+  //    seven versions don't drown out the て-form's two), then lean toward new patterns and ones closest to coming due
+  const versions = new Map();                                  // base form → its distinct form+variant ids in the pool
+  for (const p of P) { if (!versions.has(p.base)) versions.set(p.base, new Set()); versions.get(p.base).add(qid(p.f, p.m)); }
+  const bases = [...versions.keys()], b = wpick(bases, bases.map(x => Math.sqrt(versions.get(x).size)));
+  const keys = [...byKey.keys()].filter(k => byKey.get(k)[0].base === b);
+  // Never seen: weight 2. Seen: 0.3, rising to 1.3 as it approaches its due date
+  const weight = k => { const c = S.srs[k]; return !c ? 2 : .3 + Math.min(1, (now - c.last) / ((c.s || 1) * DAY)); };
+  // A pattern also counts once per word that shares it, so each word gets a fair turn: otherwise いい (a pattern of
+  // two words) would come up as often as the other 43 い-adjectives together. Patterns with one or two words, like
+  // 行く, 来る and いい, count as SPECIAL_BOOST words so their quirks still come up every so often.
+  const words = k => Math.max(SPECIAL_BOOST, new Set(byKey.get(k).map(p => p.w)).size);
+  return { ...wordFor(byKey.get(wpick(keys, keys.map(k => weight(k) * words(k)))), prev && prev.w), kind: 'new' };
+}
+
+// ---------- The drill ----------
+const $ = s => document.querySelector(s);
+const input = $('#answer');
+
+// Show the next question and reset everything left over from the last one
+function next() {
+  cur = pick();
+  if (cur) {
+    const k = WORDS[cur.w].k;
+    recent.push(cur.w); S.seen[k] = (S.seen[k] || 0) + 1; save(); // count the word as dealt
+    shownAt = Date.now();                                        // start the answer timer
+  }
+  answered = false;
+  $('#drill').hidden = !cur; $('#emptyState').hidden = !!cur;
+  $('#qno').textContent = cur ? `第 ${qn + 1} 問` : '';
+  if (!cur) { $('#tag').textContent = 'Nothing selected'; $('#retryTag').hidden = true; $('#formJp').textContent = ''; return; }
+  const w = WORDS[cur.w];
+  const kindTag = { review: 'Review', compare: 'Compare' }[cur.kind];
+  $('#retryTag').hidden = !kindTag; $('#retryTag').textContent = kindTag || '';
+  $('#word').innerHTML = ruby(w.k, w.r);
+  $('#meaning').textContent = w.m;
+  renderPrompt();
+  input.value = ''; input.readOnly = false; input.placeholder = 'たべません'; // kana, so it lines up with the answer squares
+  attempts = 0; tried = []; diag = ''; typoUsed = false;
+  $('#typoNote').hidden = true;
+  updateTag();
+  $('#stamp').hidden = true; $('#stamp').classList.remove('go');
+  $('#hints').hidden = true; $('#hints').innerHTML = '';
+  $('#feedback').hidden = true; $('#feedback').innerHTML = '';
+  setCheckLabel(false);
+  $('#revealBtn').hidden = false;
+}
+
+// The main button reads 確認 Check while answering and 次へ Next once the question is done
+const setCheckLabel = done => {
+  $('#checkBtn').innerHTML = done ? '<span class="btn-jp" lang="ja">次へ</span>Next' : '<span class="btn-jp" lang="ja">確認</span>Check';
+};
+// "You tried …" with each wrong attempt as a soft red tag
+const triedHtml = () => `<div class="given">You tried ${tried.map(t => `<span class="tried" lang="ja">${esc(t)}</span>`).join('')}</div>`;
+
+// Name the grammar form, or in Translate from English mode give an English phrase to put into Japanese
+function renderPrompt() {
+  if (!cur) return;
+  const english = S.prompt === 'meaning';                     // Translate from English mode
+  $('#formEn').innerHTML = english ? enPrompt(WORDS[cur.w], cur.f, cur.m) : qLabel(cur.f, cur.m);
+  $('#formJp').textContent = english ? '' : qJp(cur.f, cur.m);
+}
+
+// The exact word type is hint 1, so it stays hidden until a miss unless the Word type toggle is on
+function updateTag() {
+  if (!cur) return;
+  const w = WORDS[cur.w];
+  $('#tag').textContent = S.showType || answered || attempts > 0 ? tagFor(w) : (isVerb(w) ? 'Verb' : w.c === 'noun' ? 'Noun' : 'Adjective');
+}
+
+// Every accepted answer for question q, in kana and in kanji spelling
+function answersFor(q) {
+  const w = WORDS[q.w];
+  return { kana: answers(w.r, w, q.f, q.m), kanji: answers(w.k, w, q.f, q.m) };
+}
+
+// Check the typed answer (or give up, when revealed is true). A wrong answer unlocks the next hint; a right one,
+// or Show answer, finishes the question: record it, schedule its review and show the feedback.
+function grade(revealed) {
+  const raw = input.value;
+  if (!revealed && !norm(raw)) { input.focus(); return; }     // nothing typed yet
+  // The how-to line under the buttons is only needed until the first answer
+  if (!S.seenIntro) { S.seenIntro = true; save(); }
+  $('#intro').hidden = true;
+  const A = answersFor(cur), given = norm(raw);
+  const ok = !revealed && (A.kana.includes(given) || A.kanji.includes(given));
+  const w = WORDS[cur.w];
+  $('#typoNote').hidden = true;
+  if (!revealed && !ok) {
+    const d = diagnose(w, cur.f, cur.m, given);
+    // A slip of the fingers gets one free fix per question: no hint, no penalty
+    if (!d && !typoUsed && isTypo(given, w, A)) {
+      typoUsed = true; input.value = toKana(raw, true); $('#typoNote').hidden = false; input.focus();
+      return;
+    }
+    // Wrong: unlock the next hint and let them keep trying; only Show answer gives it away
+    attempts++; tried.push(toKana(raw, true)); diag = d;
+    if (attempts >= 3) $('#word').innerHTML = rubyDiff(w.k, w.r, A.kanji[0], A.kana[0]); // third miss: show the answer on the word
+    input.value = ''; input.placeholder = ''; // the hint panel says to try again; English wouldn't fit the squares
+    updateTag(); showHints(); input.focus();
+    return;
+  }
+  // The question is finished
+  answered = true; qn++;
+  input.value = ok ? toKana(raw, true) : (tried[tried.length - 1] || '');
+  input.readOnly = true;
+  $('#hints').hidden = true;
+  updateTag();
+
+  // Only a first-try answer counts as correct; anything else comes back for review
+  const firstTry = ok && attempts === 0;
+  const st = statFor(qid(cur.f, cur.m));
+  st.n++; session.n++;
+  st[revealed || attempts >= 3 ? 'cx' : 'c' + attempts]++; // c0 first try, c1/c2 hints used, cx answer shown
+  if (firstTry) { st.ok++; session.ok++; session.streak++; S.best = Math.max(S.best, session.streak); }
+  else session.streak = 0;
+  // Spaced review and the miss loop work per pattern; a slow or typo-fixed answer counts as shaky
+  const quality = !firstTry ? 'again' : typoUsed || isSlow(Date.now() - shownAt, A.kana[0]) ? 'hard' : 'good';
+  const key = patKey(w, cur.f, cur.m);
+  schedule(key, quality); loopUpdate(key, quality, cur.w);
+  save();
+
+  $('#feedback').innerHTML = feedbackHtml(w, A, ok, firstTry, revealed); $('#feedback').hidden = false;
+  if (ok) drawStamp(firstTry && session.streak % 10 === 0);   // every 10th in a row gets よくできました
+  setCheckLabel(true);
+  $('#revealBtn').hidden = true;
+  renderStats();
+}
+
+// The panel under a finished question: the verdict, the answer, anything else accepted, and the rule
+function feedbackHtml(w, A, ok, firstTry, revealed) {
+  const others = A.kanji.slice(1).filter(x => x !== A.kanji[0]); // accepted alternatives besides the textbook answer
+  let html = ok
+    ? `<div class="fb-head"><span class="jp" lang="ja">正解</span><strong>${firstTry ? 'Correct' : `Correct on try ${attempts + 1}`}</strong></div>`
+    : `<div class="fb-head miss"><span class="jp" lang="ja">${revealed ? '答え' : '惜しい'}</span><strong>${revealed ? 'The answer' : 'Not quite'}</strong></div>`;
+  if (attempts < 3) html += `<div class="ans-big" lang="ja">${ruby(A.kanji[0], A.kana[0])}</div>`; // from the 3rd miss on, the word above already shows it
+  if (S.prompt === 'meaning') html += `<div class="also">Form: <span class="form-cell">${qLabel(cur.f, cur.m)}</span></div>`; // name the form it was
+  if (tried.length) html += triedHtml();
+  if (ok && !firstTry) html += `<div class="also">This one will come back in a few questions for review.</div>`;
+  if (others.length) html += `<div class="also">Also accepted: ${others.map(o => `<span lang="ja">${esc(o)}</span>`).join('、 ')}</div>`;
+  return html + `<div class="rule"><b><span lang="ja">仕組み</span>How it works</b>${ruleForQ(w, cur.f, cur.m)}</div>`;
+}
+
+// Every 10th first-try answer in a row gets the classic よくできました ("well done") stamp
+function drawStamp(wellDone) {
+  const el = $('#stamp');
+  const text = wellDone
+    ? `<text x="80" y="74" font-size="30">よく</text><text x="80" y="108" font-size="21">できました</text>`
+    : `<text x="80" y="97" font-size="48">正解</text>`;
+  // A double-ringed seal, roughened by the #ink filter defined in the page
+  el.innerHTML = `<svg viewBox="0 0 160 160"><g filter="url(#ink)">` +
+    `<circle class="disc" cx="80" cy="80" r="72" stroke-width="7"/><circle class="ring" cx="80" cy="80" r="61" stroke-width="2"/>${text}</g></svg>`;
+  // Restart the stamp animation (reading offsetWidth forces a reflow so removing and re-adding the class replays it)
+  el.classList.remove('go'); el.hidden = false; void el.offsetWidth; el.classList.add('go');
+  const p = $('.prompt'); p.classList.remove('thud'); void p.offsetWidth; p.classList.add('thud'); // and the card's small jolt
+}
+
+// [which type it is, how that type behaves]; tagShown drops the first part when the tag already says it
+function classHint(w, tagShown) {
+  const e = w.r.slice(-1);
+  const [type, how] = (() => { switch (w.c) {
+    case 'godan':
+      return [`${J(w.k)} is a <b>godan</b> verb ending in ${J(e)}.`,
+        `Godan verbs swap that last kana along its row: ${J([...ROWS[e]].join(' '))}.` +
+        (LOOKS_ICHIDAN.test(w.r) ? ` ${J(w.k)} looks like an ichidan verb, but it isn't.` : '')];
+    case 'ichidan':
+      return [`${J(w.k)} is an <b>ichidan</b> verb.`, `The stem never changes: drop ${J('る')} and attach the ending.`];
+    case 'suru':
+      return [`${J(w.k)} is an <b>irregular</b> ${J('する')} verb.`,
+        (w.k !== 'する' ? `Only the ${J('する')} part conjugates. ` : '') + `${J('する')} turns into ${J('し')}, ${J('さ')} or ${J('す')} depending on the form.`];
+    case 'kuru':
+      return [`${J('来る')} is <b>irregular</b>.`, `The kanji stays, but its reading shifts between ${J('き')}, ${J('こ')} and ${J('く')} depending on the form.`];
+    case 'iadj':
+      return w.ii ? [`${J(w.k)} is an irregular <b>い-adjective</b>.`, `It conjugates as if it were ${J(w.r.slice(0, -2) + 'よい')}.`]
+        : [`${J(w.k)} is an <b>い-adjective</b>.`, `Its final ${J('い')} changes to make each form.`];
+    case 'noun':
+      return [`${J(w.k)} is a <b>noun</b>.`, `Nouns work like な-adjectives: the word never changes, and です / だ in its forms goes after it.`];
+    default:
+      return [`${J(w.k)} is a <b>な-adjective</b>.`, `The word itself never changes; the ending goes after it.` +
+        (w.endsI ? ` Its ${J('い')} is part of the word, not an ending.` : '')];
+  } })();
+  return tagShown ? how : `${type} ${how}`;
+}
+
+// The panel after a wrong try: what to do next, what you tried, what kind of mistake it was, then the hints unlocked so far
+function showHints() {
+  const w = WORDS[cur.w];
+  const nudge = attempts === 1 ? 'Try again with this hint.' : attempts === 2 ? 'Here is the rule. Try again.'
+    : 'The answer is now on the word above, with the change in red. Type it to move on.';
+  let html = `<div class="fb-head miss"><span class="jp" lang="ja">惜しい</span><strong>Not quite.</strong><span class="given">${nudge}</span></div>`;
+  html += triedHtml();
+  if (diag) html += `<div class="diag">${diag}</div>`;
+  html += `<div class="hint-card"><span class="lbl">Hint 1 · Word type</span>${classHint(w, S.showType)}</div>`;
+  if (attempts >= 2) html += `<div class="hint-card"><span class="lbl">Hint 2 · How to build it</span>${ruleForQ(w, cur.f, cur.m, false)}</div>`;
+  $('#hints').innerHTML = html; $('#hints').hidden = false;
+}
+
+// Refresh the session tally under the drill and the Score window's list
+function renderStats() {
+  $('#streak').textContent = session.streak;
+  $('#best').textContent = S.best;
+  $('#acc').textContent = session.n ? Math.round(100 * session.ok / session.n) + '%' : '–';
+  $('#accLbl').textContent = session.n ? `${session.ok} of ${session.n}` : 'Correct';
+  // Stats are kept per form and variant ("pot~n"); the base form decides whether it's still offered
+  const rows = Object.keys(S.stats).filter(k => CONCRETE.includes(k.split('~')[0]) && S.stats[k].n > 0)
+    .map(k => { const s = statFor(k); return { f: k, s, score: formScore(s) }; })
+    .sort((a, b) => a.score - b.score || b.s.n - a.s.n);      // weakest first; ties: the most practiced first
+  $('#weakEmpty').hidden = rows.length > 0;
+  // Overall score: every answer counts equally, so a form you've practiced more weighs more
+  const total = rows.reduce((a, r) => a + r.s.n, 0);
+  const overall = total ? Math.round(100 * rows.reduce((a, r) => a + r.score * r.s.n, 0) / total) : null;
+  $('#scOverall').hidden = overall == null;
+  $('#scOverall').innerHTML = overall == null ? '' : `<b>${overall}%</b> overall across ${total} answer${total === 1 ? '' : 's'}`;
+  $('#weak').innerHTML = rows.map(({ f, s, score }) => {
+    // One row per form: its tags and %, a bar split by how each answer went, and first-try answers out of all ("2/3")
+    const parts = [['c0', 's-ok', 'First try'], ['c1', 's-h1', 'After 1 hint'], ['c2', 's-h2', 'After 2 hints'], ['cx', 's-x', 'Answer shown']]
+      .filter(([k]) => s[k]);                                  // only the kinds of result this form has had
+    // Each color carries its count as a tooltip; tabindex -1 lets a tap on a phone show it without adding tab stops
+    const bar = parts.map(([k, cls, label]) =>
+      `<i class="${cls}" style="width:${(100 * s[k] / s.n).toFixed(1)}%" data-tip="${label}: ${s[k]}" tabindex="-1"></i>`).join('');
+    const summary = parts.map(([k, , label]) => `${label}: ${s[k]}`).join(', '); // the whole bar in words, for screen readers
+    const [bf, m] = f.split('~');
+    const kind = ADJ_FORMS.includes(bf) ? '<span class="sc-kind">adj. / noun</span>' : '';
+    return `<li><div class="sc-top"><span class="form-cell">${qLabel(bf, m)}</span>${kind}<span class="sc-pct">${Math.round(score * 100)}%</span></div>` +
+      `<div class="sc-bar" role="img" aria-label="${summary}">${bar}</div>` +
+      `<div class="sc-counts" title="First-try answers out of all answers">${s.c0}/${s.n}</div></li>`;
+  }).join('');
+}
+
+// ---------- Study settings ----------
+// Every section is rebuilt from S whenever something changes, so the chips always match the saved state.
+
+// A toggle chip: a button whose aria-pressed shows whether it's on
+function chip(label, on, onClick) {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.textContent = label; b.setAttribute('aria-pressed', on);
+  b.addEventListener('click', onClick);
+  return b;
+}
+// After any change: save, redraw the window, and move on if the current question no longer fits the settings
+function settingsChanged() {
+  save(); renderSettings();
+  if (!cur || !S.types.includes(typeOf(WORDS[cur.w])) || !questionSpecs().some(q => q.f === cur.f && q.m === cur.m)) next();
+}
+const toggleIn = (list, x) => list.includes(x) ? list.filter(y => y !== x) : [...list, x]; // add x if missing, else remove it
+
+// One group of form chips (Core, Linking and wishes…) with its All / None link
+function renderGroups(el, groups) {
+  el.innerHTML = '';
+  groups.forEach(([name, ids]) => {
+    const g = document.createElement('div'); g.className = 'group';
+    const head = document.createElement('div'); head.className = 'group-head';
+    head.innerHTML = `<h3>${name}</h3>`;
+    const allOn = ids.every(f => S.forms.includes(f));
+    const tog = document.createElement('button'); tog.type = 'button'; tog.className = 'group-toggle'; tog.textContent = allOn ? 'None' : 'All';
+    tog.addEventListener('click', () => {
+      S.forms = allOn ? S.forms.filter(f => !ids.includes(f)) : [...new Set([...S.forms, ...ids])];
+      settingsChanged();
+    });
+    head.append(tog); g.append(head);
+    const chips = document.createElement('div'); chips.className = 'chips';
+    ids.forEach(f => chips.append(chip(BASE_NAMES[f], S.forms.includes(f), () => { S.forms = toggleIn(S.forms, f); settingsChanged(); })));
+    g.append(chips);
+    el.append(g);
+  });
+}
+// Presets: the built-in ones, then your saved ones (each with a × to delete)
+function renderPresets() {
+  const qc = $('#quickChips'); qc.innerHTML = '';
+  const isSet = ids => sameSet(ids, S.forms);                  // a built-in preset is highlighted while its forms are selected
+  BUILTIN_PRESETS.forEach(([label, ids]) => qc.append(chip(label, isSet(ids), () => { S.forms = [...ids]; settingsChanged(); })));
+  const mp = $('#myPresets'); mp.innerHTML = '';
+  S.presets.forEach((p, j) => {
+    const wrap = document.createElement('span'); wrap.className = 'preset';
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'preset-del'; del.textContent = '×'; del.setAttribute('aria-label', `Delete preset ${p.name}`);
+    del.addEventListener('click', () => { S.presets.splice(j, 1); save(); renderSettings(); $('#presetMsg').textContent = `Deleted “${p.name}”.`; });
+    wrap.append(chip(p.name, matchesPreset(p), () => applyPreset(p)), del);
+    mp.append(wrap);
+  });
+  mp.hidden = !S.presets.length;
+}
+// Versions: one row per pair; the last chip on in a pair can't be switched off
+function renderFilters() {
+  const fp = $('#filterPairs'); fp.innerHTML = '';
+  FILTER_PAIRS.forEach(([name, ...opts]) => {
+    const row = document.createElement('div'); row.className = 'pair';
+    row.innerHTML = `<span class="pair-name">${name}</span>`;
+    const chips = document.createElement('div'); chips.className = 'chips';
+    opts.forEach(([id, label]) => chips.append(chip(label, S.filters[id], () => {
+      const other = opts.find(o => o[0] !== id)[0];
+      if (S.filters[id] && !S.filters[other]) return;          // keep at least one of each pair on
+      S.filters[id] = !S.filters[id]; settingsChanged();
+    })));
+    row.append(chips); fp.append(row);
+  });
+}
+// Question style and Display. In Translate mode the prompt already gives the meaning, so the word-meaning line stays hidden.
+function renderDisplay() {
+  const english = S.prompt === 'meaning';
+  const pc = $('#promptChips'); pc.innerHTML = '';
+  [['form', 'Name the form'], ['meaning', 'Translate from English']].forEach(([id, label]) =>
+    pc.append(chip(label, (S.prompt || 'form') === id, () => { S.prompt = id; save(); renderSettings(); renderPrompt(); })));
+  $('#optFuri').setAttribute('aria-pressed', S.furigana);
+  $('#optMeaning').setAttribute('aria-pressed', S.meaning && !english);
+  $('#optMeaning').disabled = english;
+  $('#optMeaning').title = english ? 'Hidden while translating from English' : '';
+  $('#optType').setAttribute('aria-pressed', S.showType);
+  $('#optTimer').setAttribute('aria-pressed', !!S.timer);
+  renderTimer();
+  $('#sheet').classList.toggle('no-furigana', !S.furigana);   // the CSS hides furigana / the meaning line from these classes
+  $('#sheet').classList.toggle('no-meaning', !S.meaning || english);
+}
+// Redraw the whole Study settings window and the summary on its header button
+function renderSettings() {
+  $('#settingsSum').textContent = `${S.forms.length} form${S.forms.length === 1 ? '' : 's'} · ${S.types.length} word type${S.types.length === 1 ? '' : 's'}`;
+  renderPresets();
+  renderFilters();
+  const tc = $('#typeChips'); tc.innerHTML = '';
+  TYPES.forEach(([id, label]) => tc.append(chip(label, S.types.includes(id), () => { S.types = toggleIn(S.types, id); settingsChanged(); })));
+  renderGroups($('#verbGroups'), SETTINGS_VERB);
+  renderGroups($('#adjGroups'), SETTINGS_ADJ);
+  renderDisplay();
+  updateTag();
+}
+// Your presets keep what you study (forms, versions, word types, question style), not display options
+const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x)); // same items, any order
+const matchesPreset = p => sameSet(p.forms, S.forms) && sameSet(p.types, S.types) && p.prompt === (S.prompt || 'form')
+  && Object.keys(S.filters).every(k => !!p.filters[k] === !!S.filters[k]);
+function applyPreset(p) {
+  S.forms = p.forms.filter(f => BASES[f]); S.filters = { ...defaults().filters, ...p.filters };
+  S.types = [...p.types]; S.prompt = p.prompt;
+  settingsChanged(); renderPrompt();
+}
+// Save preset: store the current setup under the typed name
+$('#presetForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('#presetName').value.trim(), msg = $('#presetMsg');
+  if (!name) { msg.textContent = 'Type a name for this setup first.'; $('#presetName').focus(); return; }
+  const p = { name, forms: [...S.forms], filters: { ...S.filters }, types: [...S.types], prompt: S.prompt || 'form' };
+  const at = S.presets.findIndex(x => x.name.toLowerCase() === name.toLowerCase());
+  if (at >= 0) S.presets[at] = p; else S.presets.push(p); // the same name replaces the older preset
+  save(); renderSettings();
+  $('#presetName').value = '';
+  msg.textContent = at >= 0 ? `Updated “${name}”.` : `Saved “${name}”.`;
+});
+
+// Display toggles
+$('#optFuri').addEventListener('click', () => { S.furigana = !S.furigana; save(); renderSettings(); });
+$('#optMeaning').addEventListener('click', () => { S.meaning = !S.meaning; save(); renderSettings(); });
+$('#optType').addEventListener('click', () => { S.showType = !S.showType; save(); renderSettings(); });
+$('#optTimer').addEventListener('click', () => { S.timer = !S.timer; save(); renderSettings(); });
+
+// Reset all stats (in the Score window): a red button that asks once before clearing anything
+function renderReset(confirming) {
+  const row = $('#resetRow');
+  row.innerHTML = confirming
+    ? `<span>Clear streaks, scores, study time and the review schedule?</span><button class="btn danger-solid small" id="resetYes">Reset</button><button class="btn ghost small" id="resetNo">Keep</button>`
+    : `<button class="btn danger small" id="resetBtn">Reset all stats</button>`;
+  if (confirming) {
+    $('#resetYes').addEventListener('click', () => {
+      S.stats = {}; S.srs = {}; S.speed = { avg: 1, n: 0 }; S.best = 0;
+      S.time = { total: 0, days: {} }; sessionMs = 0; lastAct = Date.now();
+      Object.assign(session, { n: 0, ok: 0, streak: 0 }); loop.clear();
+      save(); renderStats(); renderTimer(); renderStudyTime(); renderReset(false);
+    });
+    $('#resetNo').addEventListener('click', () => renderReset(false));
+  } else $('#resetBtn').addEventListener('click', () => renderReset(true));
+}
+
+// ---------- Input ----------
+// While a Japanese keyboard (IME) is composing, leave the text alone; it delivers finished kana itself.
+let composing = false;
+input.addEventListener('compositionstart', () => { composing = true; });
+input.addEventListener('compositionend', () => { composing = false; });
+// Turn romaji into kana as you type. Only the text before the cursor is converted, so editing mid-word keeps the cursor in place.
+input.addEventListener('input', e => {
+  if (composing || e.isComposing) return;
+  const v = input.value, pos = input.selectionStart ?? v.length;
+  const before = toKana(v.slice(0, pos), false);
+  if (before !== v.slice(0, pos)) {
+    input.value = before + v.slice(pos);
+    input.setSelectionRange(before.length, before.length);
+  }
+});
+// Enter (or the main button) checks the answer, then moves on once the question is finished
+$('#answerForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (composing) return;                                       // Enter while composing just confirms the IME's kana
+  if (answered) { next(); input.focus(); } else grade(false);
+});
+$('#revealBtn').addEventListener('click', () => { if (!answered) grade(true); input.focus(); });
+
+// ---------- Cheat sheet ----------
+// [godan pattern, ichidan pattern]; する and 来る columns show the forms themselves.
+const CHEAT_VERB = {
+  masu: ['い-row + ます', 'drop る + ます'], masen: ['い-row + ません', 'drop る + ません'],
+  mashita: ['い-row + ました', 'drop る + ました'], masendeshita: ['い-row + ませんでした', 'drop る + ませんでした'],
+  mashou: ['い-row + ましょう', 'drop る + ましょう'],
+  nai: ['あ-row + ない (う → わ)', 'drop る + ない'], ta: ['て-form, with た / だ', 'drop る + た'],
+  nakatta: ['あ-row + なかった', 'drop る + なかった'], vol: ['お-row + う', 'drop る + よう'], imp: ['え-row', 'drop る + ろ'],
+  te: ['depends on the ending (chart below)', 'drop る + て'], teiru: ['て-form + いる', 'drop る + ている'],
+  tara: ['plain past + ら', 'plain past + ら'],
+  ba: ['え-row + ば', 'drop る + れば'], tai: ['い-row + たい', 'drop る + たい'],
+  pot: ['え-row + る', 'drop る + られる'], pass: ['あ-row + れる', 'drop る + られる'],
+  caus: ['あ-row + せる', 'drop る + させる'], cpass: ['あ-row + される (す-verbs: させられる)', 'drop る + させられる'],
+};
+// [い-adjective pattern, な-adjective and noun pattern]
+const CHEAT_ADJ = {
+  aNeg: ['drop い + くない', '+ じゃない'], aPast: ['drop い + かった', '+ だった'], aPastNeg: ['drop い + くなかった', '+ じゃなかった'],
+  aPol: ['+ です', '+ です'], aPolNeg: ['drop い + くないです', '+ じゃありません'], aPolPast: ['drop い + かったです', '+ でした'],
+  aPolPastNeg: ['drop い + くなかったです', '+ じゃありませんでした'], aTe: ['drop い + くて', '+ で'], aAdv: ['drop い + く', '+ に'],
+  aBa: ['drop い + ければ', '+ なら'],
+};
+// What each form means: [explanation, English for the 書く / 高い example]
+const FORM_INFO = {
+  masu: ['The everyday polite form for present and future. Use it with strangers, teachers and coworkers.', 'I write / I will write'],
+  masen: ['Polite "don\'t" or "won\'t".', 'I don\'t write / I won\'t write'],
+  mashita: ['Polite past: something you did.', 'I wrote'],
+  masendeshita: ['Polite past negative: something you didn\'t do.', 'I didn\'t write'],
+  mashou: ['Polite "let\'s…", or "shall I…?" when offering.', 'Let\'s write'],
+  nai: ['Casual "don\'t" or "won\'t". Used with friends and family, and inside longer sentences.', 'don\'t write'],
+  ta: ['Casual past. Also the base for たら and for phrases like たことがある ("have done before").', 'wrote'],
+  nakatta: ['Casual past negative.', 'didn\'t write'],
+  vol: ['Casual "let\'s…". With と思う it means "I think I\'ll…".', 'let\'s write'],
+  imp: ['A blunt command. Rude in normal conversation; you\'ll see it on signs, in sports, and in manga.', 'Write!'],
+  te: ['The linking form. It joins actions ("…and then…"), asks for things with ください, and builds ている ("is doing").', 'write and… / 書いてください: please write'],
+  teiru: ['Something happening right now, or a state that carries on (結婚している: "is married"). In speech the い often drops: 書いてる.', 'I\'m writing'],
+  tara: ['"If" or "when" for one specific situation, often "once X happens".', 'if I write / when I\'ve written'],
+  ba: ['"If" as a general condition. Often used for advice or "if only".', 'if I write'],
+  tai: ['"Want to…". It conjugates like an い-adjective: たくない, たかった.', 'I want to write'],
+  pot: ['"Can…": ability or possibility. The object usually takes が instead of を.', 'can write'],
+  pass: ['"Is done (by someone)". Also used for something unwelcome happening to you, and as a respectful form.', 'is written'],
+  caus: ['"Make" or "let" someone do something. Context tells you which.', 'make (someone) write / let (someone) write'],
+  cpass: ['"Be made to do" something, usually against your will.', 'be made to write'],
+  aNeg: ['Casual "is not…".', 'isn\'t expensive'],
+  aPast: ['Casual "was…".', 'was expensive'],
+  aPastNeg: ['Casual "was not…".', 'wasn\'t expensive'],
+  aPol: ['Polite "is…". Add です to soften any adjective.', 'is expensive'],
+  aPolNeg: ['Polite "is not…".', 'isn\'t expensive'],
+  aPolPast: ['Polite "was…".', 'was expensive'],
+  aPolPastNeg: ['Polite "was not…".', 'wasn\'t expensive'],
+  aTe: ['The linking form: "…and…". It joins adjectives or gives a reason.', 'expensive and… / expensive, so…'],
+  aAdv: ['Turns the adjective into an adverb. With なる it means "become…".', 'expensively / 高くなる: get expensive'],
+  aBa: ['"If it is…".', 'if it\'s expensive'],
+};
+
+// The legend's explanation box for form f: its names, what it means, and an example with 書く or 高い
+function formInfo(f) {
+  const w = WORDS.find(x => x.k === (VERB_FORMS.includes(f) ? '書く' : '高い'));
+  const [what, en] = FORM_INFO[f];
+  return `<div class="fi-head"><span class="form-cell">${formLabel(FORMS[f][0])}</span><span class="form-jp" lang="ja">${FORMS[f][1]}</span></div>` +
+    `<p>${what}</p><p class="fi-eg"><span class="ex" lang="ja">${formRuby(w, f)}</span><span class="muted">${esc(en)}</span></p>`;
+}
+
+// "What the forms mean" at the top of a cheat sheet tab: the tag color key, a button per form, and the explanation
+// box, opened on the form being asked when it's on this tab
+function formLegend(ids) {
+  const sel = cur && ids.includes(cur.f) ? cur.f : ids[0];
+  const btns = ids.map(f => `<button type="button" class="form-btn" data-f="${f}" aria-pressed="${f === sel}"><span class="form-cell">${formLabel(FORMS[f][0])}</span></button>`).join('');
+  return `<section class="legend"><h3>What the forms mean</h3>` +
+    `<p class="key"><span><span class="seg polite">Polite</span> です / ます speech, for people you don't know well</span>` +
+    `<span><span class="seg">Plain</span> casual speech, also used inside longer sentences</span>` +
+    `<span><span class="seg past">Past</span> already happened</span><span><span class="seg neg">Negative</span> "not"</span></p>` +
+    `<div class="form-btns">${btns}</div><div class="form-info" aria-live="polite">${formInfo(sel)}</div></section>`;
+}
+
+// Example words, swapped for another when the default is the word being asked
+const exWord = (k, alt) => WORDS.find(w => w.k === (cur && WORDS[cur.w].k === k ? alt : k));
+const exForm = (w, f) => `<span class="ex" lang="ja">${formRuby(w, f)}</span>`;
+
+// A forms table: one row per form, one column per word class (cols), each cell its pattern plus an example.
+// The current question's row and class column are highlighted; forms a class doesn't have show a dash.
+function cheatTable(groups, cols, patterns, curCol) {
+  const head = `<tr><th>Form</th>${cols.map((c, j) =>
+    `<th class="${j === curCol ? 'hl' : ''}">${c.title}<span class="eg" lang="ja">e.g. ${esc(c.w.k)}</span></th>`).join('')}</tr>`;
+  let body = '';
+  for (const [name, ids] of groups) {
+    body += `<tr class="grp"><th colspan="${cols.length + 1}">${name}</th></tr>`;
+    for (const f of ids) {
+      body += `<tr class="${cur && cur.f === f ? 'now' : ''}"><th scope="row"><span class="form-cell">${formLabel(FORMS[f][0])}</span></th>` +
+        cols.map((c, j) => `<td class="${j === curCol ? 'hl' : ''}">${!fits(c.w, f) ? '—'
+          : (c.pat != null ? `<span class="pat">${patterns[f][c.pat]}</span>` : '') + exForm(c.w, f)}</td>`).join('') +
+        '</tr>';
+    }
+  }
+  return `<div class="tbl"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+
+// [index into the row, label, what uses it, a form that shows it]
+const ROW_USES = [
+  [0, 'あ-row', 'ない, なかった, passive (+れる), causative (+せる)', 'nai'],
+  [1, 'い-row', 'ます and its family, たい, ましょう', 'masu'],
+  [3, 'え-row', 'ば, potential (+る), imperative', 'ba'],
+  [4, 'お-row', 'volitional (+う)', 'vol'],
+];
+// The て-form groups: [endings, て ending, た ending]
+const TE_GROUPS = [['うつる', 'って', 'った'], ['むぶぬ', 'んで', 'んだ'], ['く', 'いて', 'いた'], ['ぐ', 'いで', 'いだ'], ['す', 'して', 'した']];
+
+// The "Godan endings" section: which row each form uses, a card per ending, and the て-form sound changes.
+// The current question's ending and て-form group are highlighted.
+function endingChart() {
+  const cw = cur && WORDS[cur.w];
+  const curEnd = cw && cw.c === 'godan' ? cw.r.slice(-1) : null;
+  const exFor = e => WORDS.find(w => w.c === 'godan' && w.r.slice(-1) === e && !w.iku && !w.aru); // a regular example per ending
+
+  const legend = ROW_USES.map(([, name, uses]) =>
+    `<li><span class="row-name" lang="ja">${name}</span><span>${uses}</span></li>`).join('');
+
+  // One card per ending: each row's kana next to a full example (か → 書かない)
+  const rowCards = [...'うくぐすつぬぶむる'].map(e => {
+    const w = exFor(e);
+    const lines = ROW_USES.map(([i, name, , f]) =>
+      `<li><span class="row-name" lang="ja">${name}</span><span class="kana" lang="ja">${ROWS[e][i]}</span>${exForm(w, f)}</li>`).join('');
+    return `<div class="end-card${e === curEnd ? ' now' : ''}"><div class="end-head">` +
+      `<span class="end-kana" lang="ja">〜${e}</span><span class="ex" lang="ja">${ruby(w.k, w.r)}</span>` +
+      (e === 'う' ? `<span class="end-note">あ-row is わ, not あ</span>` : '') + `</div><ul>${lines}</ul></div>`;
+  }).join('');
+
+  // One card per て-form group, with an example for each ending in it, then 行く as the exception
+  const iku = WORDS.find(w => w.iku);
+  const teCards = TE_GROUPS.map(([ends, te, ta]) => {
+    const exs = [...ends].map(e => { const w = exFor(e); return `<span class="ex" lang="ja">${ruby(w.k, w.r)} → ${formRuby(w, 'te')}</span>`; }).join('');
+    const now = curEnd && ends.includes(curEnd) && !cw.iku;
+    return `<div class="end-card${now ? ' now' : ''}"><div class="end-head"><span class="end-kana" lang="ja">${[...ends].map(e => '〜' + e).join(' ')}</span></div>` +
+      `<div class="te-rule" lang="ja">${te} <span class="muted">/ ${ta}</span></div><div class="te-ex">${exs}</div></div>`;
+  }).join('') +
+    `<div class="end-card${cw && cw.iku ? ' now' : ''}"><div class="end-head"><span class="end-kana" lang="ja">${ruby(iku.k, iku.r)}</span><span class="end-note">the one exception</span></div>` +
+    `<div class="te-rule" lang="ja">って <span class="muted">/ った</span></div><div class="te-ex"><span class="ex" lang="ja">${ruby(iku.k, iku.r)} → ${formRuby(iku, 'te')}</span>` +
+    `<span class="pat">Other く verbs take いて: ${J('書いて')}</span></div></div>`;
+
+  return `<h4>Each form uses one row of the kana chart</h4><ul class="row-legend">${legend}</ul>` +
+    `<h4>Swap the last kana into that row</h4><div class="end-grid">${rowCards}</div>` +
+    `<h4>て-form and past change the sound instead</h4><p class="note">Group by the last kana. The past (た-form) is the same change with た / だ.</p>` +
+    `<div class="end-grid">${teCards}</div>`;
+}
+
+// Build both cheat sheet tabs, highlighting the current question's form and word class
+function buildCheat() {
+  const cw = cur && WORDS[cur.w];
+  const vCol = cw ? { godan: 0, ichidan: 1, suru: 2, kuru: 3 }[cw.c] : null; // which table column to highlight
+  const aCol = cw ? { iadj: 0, naadj: 1, noun: 2 }[cw.c] : null;
+  const lookalikes = WORDS.filter(w => w.c === 'godan' && LOOKS_ICHIDAN.test(w.r))
+    .map(w => `<span class="mini" lang="ja">${esc(w.k)}</span>`).join('');
+  $('#cheatVerbs').innerHTML = formLegend(VERB_FORMS) + `
+    <section><h3>Godan or ichidan?</h3><ul class="tips">
+      <li>Anything that doesn't end in <span lang="ja">る</span> is <b>godan</b>: <span lang="ja">書く, 話す, 飲む</span>.</li>
+      <li>あ-, う- or お-row + <span lang="ja">る</span> is <b>godan</b>: <span lang="ja">分かる, 作る, 乗る</span>.</li>
+      <li>い- or え-row + <span lang="ja">る</span> is usually <b>ichidan</b>: <span lang="ja">見る, 食べる</span>. Exceptions in this drill: ${lookalikes}</li>
+      <li><span lang="ja">する</span> and <span lang="ja">来る</span> are irregular, and so is every <span lang="ja">〜する</span> compound. <span lang="ja">行く</span> (て-form) and <span lang="ja">ある</span> (negative <span lang="ja">ない</span>) each have one quirk.</li>
+    </ul></section>
+    <section><h3>Verb forms</h3>${cheatTable(VERB_GROUPS, [
+      { title: 'Godan', w: exWord('書く', '読む'), pat: 0 },
+      { title: 'Ichidan', w: exWord('食べる', '見る'), pat: 1 },
+      { title: 'する', w: exWord('する', '勉強する'), pat: null },
+      { title: '来る', w: exWord('来る', '来る'), pat: null },
+    ], CHEAT_VERB, vCol)}</section>
+    <section><h3>Negatives, past and polite on other forms</h3><ul class="tips">
+      <li>Potential, passive, causative and ている forms end in <span lang="ja">る</span> and conjugate again like ichidan verbs: <span lang="ja">書ける → 書けない, 書けた, 書けます, 書けませんでした</span>.</li>
+      <li><span lang="ja">たい</span> conjugates like an い-adjective: <span lang="ja">食べたくない, 食べたかった, 食べたいです</span>.</li>
+      <li>Negative て-form: <span lang="ja">食べないで</span> ("without eating"; <span lang="ja">ないでください</span> is "please don't") or <span lang="ja">食べなくて</span> ("not eating, so…").</li>
+      <li>Negative conditionals: <span lang="ja">食べなかったら, 食べなければ</span>. <span lang="ja">食べなければならない</span> means "must eat".</li>
+      <li>Negative command: dictionary form + <span lang="ja">な</span>: <span lang="ja">書くな</span>.</li>
+    </ul></section>
+    <section><h3>Godan endings</h3>${endingChart()}</section>`;
+  $('#cheatAdjs').innerHTML = formLegend(ADJ_FORMS) + `
+    <section><h3>い or な?</h3><ul class="tips">
+      <li>い-adjectives end in <span lang="ja">い</span> and change that ending: <span lang="ja">高い → 高くない</span>.</li>
+      <li>な-adjectives stay as they are and add words after them: <span lang="ja">静か → 静かじゃない</span>. They take <span lang="ja">な</span> before a noun: <span lang="ja">静かな部屋</span>.</li>
+      <li>A few な-adjectives end in <span lang="ja">い</span>: <span lang="ja">きれい, 嫌い</span>. <span lang="ja">いい</span> conjugates from <span lang="ja">よい</span>: <span lang="ja">よくない, よかった</span>.</li>
+      <li>Polite forms of な-adjectives can also use <span lang="ja">では</span> or <span lang="ja">じゃないです</span>. All of these are accepted.</li>
+      <li>Nouns work like な-adjectives with です / だ: <span lang="ja">学生じゃない, 学生でした</span>. They have no adverb form.</li>
+      <li>Negative て-form and conditional: <span lang="ja">高くなくて, 高くなければ, 静かじゃなくて, 静かじゃなければ</span>.</li>
+    </ul></section>
+    <section><h3>Adjective and noun forms</h3>${cheatTable(ADJ_GROUPS, [
+      { title: 'い-adjectives', w: exWord('高い', '安い'), pat: 0 },
+      { title: 'な-adjectives', w: exWord('静か', '元気'), pat: 1 },
+      { title: 'Nouns', w: exWord('学生', '先生'), pat: 1 },
+    ], CHEAT_ADJ, aCol)}</section>`;
+}
+
+// ---------- Dialogs ----------
+// Done/Close button and a click on the backdrop close a dialog; focus goes back to the answer box
+function wireDialog(d, closeBtn) {
+  closeBtn.addEventListener('click', () => d.close());
+  d.addEventListener('click', e => { if (e.target === d) d.close(); }); // the backdrop counts as the dialog element itself
+  d.addEventListener('close', () => { if (cur) input.focus(); });
+}
+
+// Cheat sheet: rebuilt on every open so it reflects the current question
+const dlg = $('#cheat');
+function showTab(t) {
+  const v = t === 'verbs';
+  $('#tabVerbs').setAttribute('aria-selected', v); $('#tabAdjs').setAttribute('aria-selected', !v);
+  $('#cheatVerbs').hidden = !v; $('#cheatAdjs').hidden = v;
+}
+function openCheat() {
+  buildCheat();
+  showTab(cur && !isVerb(WORDS[cur.w]) ? 'adjs' : 'verbs');   // open on the tab for the current word
+  dlg.showModal();
+  $('.cheat-body').scrollTop = 0; // open on the legend, which already shows the current form
+}
+$('#cheatBtn').addEventListener('click', openCheat);
+$('#tabVerbs').addEventListener('click', () => showTab('verbs'));
+$('#tabAdjs').addEventListener('click', () => showTab('adjs'));
+wireDialog(dlg, $('#cheatClose'));
+// A form button in the legend shows that form's explanation
+dlg.addEventListener('click', e => {
+  const b = e.target.closest('.form-btn');
+  if (!b) return;
+  const panel = b.closest('[role="tabpanel"]');
+  panel.querySelectorAll('.form-btn').forEach(x => x.setAttribute('aria-pressed', x === b));
+  panel.querySelector('.form-info').innerHTML = formInfo(b.dataset.f);
+});
+// Text size slider: CSS zooms the tab panels by --cheat-zoom
+function applyZoom() {
+  const z = S.cheatZoom || 100;
+  $('#cheatZoom').value = z; $('#cheatZoomVal').textContent = z + '%';
+  $('.cheat-body').style.setProperty('--cheat-zoom', z / 100);
+}
+$('#cheatZoom').addEventListener('input', e => { S.cheatZoom = +e.target.value; save(); applyZoom(); });
+applyZoom();
+
+// Study settings live in a dialog; every change applies immediately through settingsChanged()
+const sdlg = $('#settingsDlg');
+const openSettings = () => sdlg.showModal();
+$('#settingsBtn').addEventListener('click', openSettings);
+$('#emptySettingsBtn').addEventListener('click', openSettings);
+wireDialog(sdlg, $('#settingsClose'));
+
+// Score dialog
+const scoreDlg = $('#scoreDlg');
+// renderStats() keeps the scores current after every answer; the study time is filled in on open and ticks while open
+$('#scoreBtn').addEventListener('click', () => { renderStudyTime(); scoreDlg.showModal(); });
+wireDialog(scoreDlg, $('#scoreClose'));
+
+// ---------- Study timer ----------
+// Counts active study time. The clock runs while you're doing something on the page and stops IDLE_CAP after your
+// last keypress, click, scroll or mouse move, or as soon as the tab is hidden, so breaks don't count.
+// Time is kept whether or not the timer is shown, so switching it on later shows your real totals.
+const IDLE_CAP = 90e3;                         // the longest pause that still counts as studying
+let sessionMs = 0, lastAct = Date.now();       // active time banked this session; when you last did something
+let tabShown = !document.hidden;               // tracked here, because by the time 'visibilitychange' fires the tab is already hidden
+let timeUnsaved = false;                       // time banked since the last timer save
+const today = () => new Date().toLocaleDateString('en-CA'); // the local date as YYYY-MM-DD
+S.time = { total: 0, days: {}, ...S.time };
+Object.keys(S.time.days).sort().slice(0, -366).forEach(d => delete S.time.days[d]); // keep a year of daily totals
+
+// Time since your last action that counts: none while the tab is hidden, and at most IDLE_CAP for a break
+const pendingMs = () => tabShown ? Math.min(Date.now() - lastAct, IDLE_CAP) : 0;
+// Every action moves the time since the last one into the session and the saved totals
+function bank() {
+  const ms = pendingMs();
+  lastAct = Date.now();
+  if (!ms) return;
+  sessionMs += ms; S.time.total += ms;
+  const d = today(); S.time.days[d] = (S.time.days[d] || 0) + ms;
+  timeUnsaved = true;
+}
+// Save only when this tab has counted time, so a tab left open in the background never writes its older copy of
+// your progress over a newer one
+const saveTime = () => { if (timeUnsaved) { save(); timeUnsaved = false; } };
+['keydown', 'pointerdown', 'pointermove', 'wheel', 'scroll', 'input'].forEach(t => addEventListener(t, bank, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { bank(); tabShown = false; saveTime(); } // count up to the moment you left, then stop
+  else { tabShown = true; lastAct = Date.now(); }                // back: start counting again from now
+});
+addEventListener('pagehide', () => { bank(); saveTime(); });      // closing or reloading the page
+
+// 0:42, 12:05, 1:03:20
+const clock = ms => {
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, ss = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+};
+// under a minute, 25 min, 1 h 05 min
+const duration = ms => {
+  const m = Math.floor(ms / 60000);
+  return m < 1 ? 'under a minute' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
+};
+// The clock beside the question number, faded while it's paused
+function renderTimer() {
+  $('#timer').hidden = !S.timer;
+  if (!S.timer) return;
+  $('#timerVal').textContent = clock(sessionMs + pendingMs());
+  $('#timer').classList.toggle('paused', !tabShown || Date.now() - lastAct >= IDLE_CAP);
+}
+// The study time line in Score: this session, today and in all
+function renderStudyTime() {
+  $('#scTime').hidden = !S.timer;
+  if (!S.timer) return;
+  const p = pendingMs();
+  $('#scTime').innerHTML = `Study time <b>${duration(sessionMs + p)}</b> this session · <b>${duration((S.time.days[today()] || 0) + p)}</b> today · <b>${duration(S.time.total + p)}</b> in all`;
+}
+let ticks = 0;
+setInterval(() => {
+  renderTimer();
+  if (scoreDlg.open) renderStudyTime();
+  if (++ticks % 30 === 0) saveTime();                          // save the totals now and then, in case the page is closed abruptly
+}, 1000);
+
+// Start up: hide the tip for returning visitors, draw the settings and scores, then ask the first question
+$('#intro').hidden = !!S.seenIntro;
+renderSettings(); renderStats(); renderReset(false); next();
+</script>
