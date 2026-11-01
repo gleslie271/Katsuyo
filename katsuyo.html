@@ -131,9 +131,9 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .no-meaning .meaning { display: none; }
 /* a single ink stroke under the word */
 .brush { width: 120px; height: 3px; border-radius: 2px; background: var(--ink); opacity: .75; margin: 16px auto 0; }
-/* "へ Polite Past Negative": each part of the form in its own color */
+/* "Convert to  Polite Past Negative": each part of the form in its own color */
 .target { margin-top: 22px; display: inline-flex; align-items: baseline; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.target .arrow { color: var(--muted); font-family: var(--f-hand); font-size: var(--t-lg); }
+.target-lbl { color: var(--muted); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .14em; } /* "Convert to" / "Say in Japanese" */
 .form-en { font-weight: 500; font-size: 1.05rem; display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .en-target { font-weight: 700; font-size: var(--t-lg); } /* the English phrase in Translate mode */
 .seg { padding: 3px 12px; border: 1px solid var(--rule); background: transparent; color: var(--ink); }
@@ -456,7 +456,7 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
             </div>
             <div class="meaning" id="meaning"></div>
             <div class="brush" aria-hidden="true"></div>
-            <div class="target"><span class="arrow" lang="ja" aria-hidden="true">へ</span><span class="form-en" id="formEn"></span></div>
+            <div class="target"><span class="target-lbl" id="targetLbl">Convert to</span><span class="form-en" id="formEn"></span></div>
           </div>
           <form class="answer" id="answerForm" autocomplete="off">
             <div class="line">
@@ -1522,6 +1522,7 @@ const triedHtml = () => `<div class="given">You tried ${tried.map(t => `<span cl
 function renderPrompt() {
   if (!cur) return;
   const english = S.prompt === 'meaning';                     // Translate from English mode
+  $('#targetLbl').textContent = english ? 'Say in Japanese' : 'Convert to';
   $('#formEn').innerHTML = english ? enPrompt(WORDS[cur.w], cur.f, cur.m) : qLabel(cur.f, cur.m);
   $('#formJp').textContent = english ? '' : qJp(cur.f, cur.m);
 }
@@ -1530,7 +1531,7 @@ function renderPrompt() {
 function updateTag() {
   if (!cur) return;
   const w = WORDS[cur.w];
-  $('#tag').textContent = S.showType || answered || attempts > 0 ? tagFor(w) : (isVerb(w) ? 'Verb' : w.c === 'noun' ? 'Noun' : 'Adjective');
+  $('#tag').textContent = 'Hint: ' + (S.showType || answered || attempts > 0 ? tagFor(w) : (isVerb(w) ? 'Verb' : w.c === 'noun' ? 'Noun' : 'Adjective'));
 }
 
 // Every accepted answer for question q, in kana and in kanji spelling
