@@ -244,7 +244,7 @@ header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .muted-note { color: var(--muted); font-size: var(--t-sm); margin: 0; }
 .muted-note a { color: inherit; text-underline-offset: 2px; }
 .muted-note a:hover { color: var(--shu); }
-.block .chips + .muted-note { margin-top: 8px; }
+.block .chips + .muted-note, .block .btn + .muted-note { margin-top: 8px; }
 /* Session stats: an ink line above, a soft rule below, mincho numerals */
 .tally { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); }
 .tally > div { padding: 14px 20px; display: grid; gap: 2px; }
@@ -417,6 +417,37 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
 .te-rule { font-family: var(--f-hand); font-size: 1.5rem; font-weight: 600; }
 .te-rule .muted { color: var(--muted); font-size: .8em; }
 .te-ex { display: grid; gap: 2px; margin-top: 4px; }
+
+/* ---------- First-visit tour ---------- */
+/* A see-through dialog over the whole page. The spot's huge shadow dims everything but the part being explained,
+   and the card beside it says what that part does */
+dialog.tour { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; overflow: hidden; }
+dialog.tour::backdrop { background: transparent; }
+.tour-spot {
+  position: absolute; border: 2px solid var(--shu); border-radius: 2px; pointer-events: none;
+  box-shadow: 0 0 0 200vmax rgba(8, 11, 18, .6); transition: top .3s, left .3s, width .3s, height .3s;
+}
+.tour-card {
+  position: absolute; width: min(380px, calc(100% - 32px)); display: grid; gap: 10px; padding: 18px 22px 16px;
+  background: var(--sheet); color: var(--ink); border: 1px solid var(--rule);
+  box-shadow: inset 0 0 0 6px var(--sheet), inset 0 0 0 7px var(--rule-soft), 0 12px 32px rgba(0, 0, 0, .3);
+  transition: top .3s, left .3s;
+}
+.tour-top { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--t-xs); color: var(--muted); letter-spacing: .1em; }
+.tour-skip { background: none; border: 0; padding: 4px 0; color: var(--muted); font-size: var(--t-xs); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.tour-skip:hover { color: var(--shu); }
+.tour-card h2 { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: var(--t-lg); }
+.tour-card h2 .jp { font-family: var(--f-hand); font-weight: 600; font-size: 1rem; color: var(--shu); }
+.tour-text { display: grid; gap: 8px; font-size: var(--t-sm); line-height: 1.6; }
+.tour-text p { margin: 0; }
+.tour-text .k { font-family: var(--f-hand); font-size: 1.1em; }
+/* A worked example: 書く + Polite Past → 書きました */
+.tour-eg { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; background: var(--paper); border: 1px solid var(--rule-soft); padding: 8px 12px; }
+.tour-eg .k { font-size: 1.35rem; }
+.tour-eg .seg { padding: 0 8px; font-size: var(--t-xs); font-weight: 700; }
+.tour-eg rt { font-size: .4em; color: var(--muted); font-family: var(--f-ui); }
+.tour-eg .arrow { color: var(--muted); }
+.tour-nav { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -592,6 +623,12 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
         </div>
         <p class="muted-note">Study timer shows how long you've studied this session beside the question number, and your time today and in all in Score. It pauses when you step away.</p>
       </div>
+
+      <div class="block">
+        <h2><span>Help</span><span class="jp" lang="ja">使い方</span></h2>
+        <button type="button" class="btn ghost small" id="tourAgain">Show the tour again</button>
+        <p class="muted-note">A short walk through how a question works, hints, and these settings.</p>
+      </div>
     </div>
   </div>
 </dialog>
@@ -613,6 +650,20 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
   <div class="cheat-body">
     <div id="cheatVerbs" role="tabpanel" aria-labelledby="tabVerbs"></div>
     <div id="cheatAdjs" role="tabpanel" aria-labelledby="tabAdjs" hidden></div>
+  </div>
+</dialog>
+
+<!-- First-visit tour: lights up one part of the page at a time; steps are in TOUR -->
+<dialog class="tour" id="tour" aria-labelledby="tourTitle" aria-describedby="tourText">
+  <div class="tour-spot" id="tourSpot" aria-hidden="true"></div>
+  <div class="tour-card" id="tourCard">
+    <div class="tour-top"><span id="tourStep"></span><button type="button" class="tour-skip" id="tourSkip">Skip tour</button></div>
+    <h2 id="tourTitle"></h2>
+    <div class="tour-text" id="tourText"></div>
+    <div class="tour-nav">
+      <button type="button" class="btn ghost small" id="tourBack">Back</button>
+      <button type="button" class="btn primary small" id="tourNext">Next</button>
+    </div>
   </div>
 </dialog>
 
@@ -9507,6 +9558,81 @@ const scoreDlg = $('#scoreDlg');
 $('#scoreBtn').addEventListener('click', () => { renderStudyTime(); scoreDlg.showModal(); });
 wireDialog(scoreDlg, $('#scoreClose'));
 
+// ---------- Tour ----------
+// Shown once on a first visit, and again from Study settings. Each step lights up one part of the page and explains it.
+const TOUR = [
+  { at: () => $('.prompt'), title: 'Change the word', jp: '問題', text: () => `
+    <p>Each question gives you a word and a form. Write the word in that form.</p>
+    ${tourExample()}
+    <p>Each colored tag is one part of the form.</p>` },
+  { at: () => $('#answerForm .line'), title: 'Type your answer', jp: '答え', text: `
+    <p>Type in romaji and it turns into kana as you go: <i>kakimashita</i> becomes <span class="k" lang="ja">かきました</span>. A Japanese keyboard works too.</p>
+    <p>Press <kbd>Enter</kbd> to check, and <kbd>Enter</kbd> again for the next word.</p>` },
+  { at: () => $('#answerForm .actions'), title: 'Stuck? Keep going', jp: 'ヒント', text: `
+    <p>A wrong answer unlocks a hint: first the word type, then the rule. Try again as often as you like, or press <b>Show answer</b>.</p>
+    <p>The <b>Cheat sheet</b> has every rule, with this question's row marked.</p>` },
+  { at: () => $('.head-nav'), title: 'Choose what to practice', jp: '設定', text: `
+    <p><b>Study settings</b> picks the forms and the words: the starter set, or the JLPT N5 to N1 lists.</p>
+    <p><b>Score</b> shows how you're doing on each form. Rules you miss come back sooner. Everything is saved in this browser.</p>` },
+];
+const tour = $('#tour'), tourSpot = $('#tourSpot'), tourCard = $('#tourCard');
+let tourSteps = [], tourAt = 0;
+// The worked example in step 1: the word on screen in its polite past (or plain negative past when that's the
+// question), so it matches the word without giving the answer away
+function tourExample() {
+  const w = WORDS[cur.w], verb = isVerb(w);
+  let f = verb ? 'mashita' : 'aPolPast';
+  if (cur.f === f && !cur.m) f = verb ? 'nakatta' : 'aPastNeg';
+  const A = answersFor({ w: cur.w, f, m: '' });
+  const jp = (k, r) => `<span class="k" lang="ja">${S.furigana ? ruby(k, r) : esc(k)}</span>`;
+  return `<div class="tour-eg">${jp(w.k, w.r)}${qLabel(f, '', w)}<span class="arrow">→</span>${jp(A.kanji[0], A.kana[0])}</div>`;
+}
+// Light up the step's part of the page and put the card below it, or above when there's no room below
+function placeTour() {
+  const r = tourSteps[tourAt].at().getBoundingClientRect(), pad = 8, gap = 12;
+  const top = r.top - pad, left = r.left - pad, w = r.width + pad * 2, h = r.height + pad * 2;
+  Object.assign(tourSpot.style, { top: top + 'px', left: left + 'px', width: w + 'px', height: h + 'px' });
+  const vw = document.documentElement.clientWidth, vh = innerHeight, cw = tourCard.offsetWidth, ch = tourCard.offsetHeight;
+  const y = top + h + gap + ch <= vh - 16 ? top + h + gap   // below
+    : top - gap - ch >= 16 ? top - gap - ch                    // above
+    : vh - ch - 16;                                            // no room either way: the foot of the screen
+  const x = Math.min(Math.max(left + w / 2 - cw / 2, 16), vw - cw - 16);
+  Object.assign(tourCard.style, { top: y + 'px', left: x + 'px' });
+}
+function showTourStep(i) {
+  tourAt = i;
+  const s = tourSteps[i], last = i === tourSteps.length - 1;
+  $('#tourStep').textContent = `${i + 1} of ${tourSteps.length}`;
+  $('#tourTitle').innerHTML = `<span>${s.title}</span><span class="jp" lang="ja">${s.jp}</span>`;
+  $('#tourText').innerHTML = typeof s.text === 'function' ? s.text() : s.text;
+  $('#tourBack').hidden = i === 0;
+  $('#tourNext').textContent = last ? 'Start practicing' : 'Next';
+  // Scroll so the part and the card under it fit on screen together, or else so the part is centered
+  const r = s.at().getBoundingClientRect(), need = r.height + 28 + tourCard.offsetHeight;
+  const offset = need <= innerHeight - 32 ? (innerHeight - need) / 2 : (innerHeight - r.height) / 2;
+  scrollTo({ top: Math.max(0, scrollY + r.top - offset) });
+  placeTour();
+  $('#tourNext').focus();
+}
+function startTour() {
+  tourSteps = TOUR.filter(s => s.at()?.getClientRects().length); // only parts that are showing (no drill: just the settings step)
+  if (!tourSteps.length) return;
+  tour.showModal(); showTourStep(0);
+}
+function endTour() {
+  if (tour.open) tour.close();
+  S.seenTour = true; save();
+}
+$('#tourNext').addEventListener('click', () => tourAt < tourSteps.length - 1 ? showTourStep(tourAt + 1) : endTour());
+$('#tourBack').addEventListener('click', () => showTourStep(tourAt - 1));
+$('#tourSkip').addEventListener('click', endTour);
+tour.addEventListener('cancel', e => { e.preventDefault(); endTour(); }); // Escape skips the tour
+tour.addEventListener('close', () => { if (cur) input.focus(); });
+// Keep the spot on its target when the page scrolls, resizes, or reflows as the fonts load
+addEventListener('scroll', () => { if (tour.open) placeTour(); }, { passive: true });
+new ResizeObserver(() => { if (tour.open) placeTour(); }).observe(document.body);
+$('#tourAgain').addEventListener('click', () => { sdlg.close(); startTour(); });
+
 // ---------- Study timer ----------
 // Counts active study time. The clock runs while you're doing something on the page and stops IDLE_CAP after your
 // last keypress, click, scroll or mouse move, or as soon as the tab is hidden, so breaks don't count.
@@ -9571,7 +9697,9 @@ setInterval(() => {
   if (++ticks % 30 === 0) saveTime();                          // save the totals now and then, in case the page is closed abruptly
 }, 1000);
 
-// Start up: hide the tip for returning visitors, draw the settings and scores, then ask the first question
+// Start up: hide the tip for returning visitors, draw the settings and scores, then ask the first question.
+// A first visit opens with the tour.
 $('#intro').hidden = !!S.seenIntro;
 renderSettings(); renderStats(); renderReset(false); next();
+if (!S.seenTour) startTour();
 </script>
