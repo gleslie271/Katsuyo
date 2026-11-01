@@ -8411,6 +8411,19 @@ for (const [r, k] of Object.entries(T)) if (/[aiueo]$/.test(r)) VOWEL[k.slice(-1
 const stretch = s => { let out = ''; for (const ch of s) out += ch === 'ー' && VOWEL[out.slice(-1)] || ch; return out; };
 // Normalize an answer for comparison: romaji to kana, katakana to hiragana, long vowels spelled out, no spaces or punctuation
 const norm = s => stretch(kataToHira(toKana(s.trim(), true)).replace(/[\s　。、.,!！?？]/g, ''));
+// Kana typed for a word read in katakana (コーヒー, サボる) turns into katakana for as long as it follows the word's
+// reading, so koohiidatta reads コーヒーだった. The ending, and anything that strays from the reading, stays hiragana.
+// It swaps kana one for one, so the text keeps its length and the cursor its place.
+function katakanaStem(s) {
+  const r = cur ? WORDS[cur.w].r : '';
+  if (!/[ァ-ヶー]/.test(r)) return s;
+  const plain = stretch(kataToHira(r));                        // the reading as norm() sees it: コーヒー → こおひい
+  let i = 0;
+  while (i < r.length && i < s.length && (s[i] === plain[i] || kataToHira(s[i]) === kataToHira(r[i]))) i++;
+  return r.slice(0, i) + s.slice(i);
+}
+// A typed answer as finished kana: romaji converted, a last n made ん, a katakana word's stem in katakana
+const typedKana = raw => katakanaStem(toKana(raw, true));
 
 // ---------- Display helpers ----------
 // Escape text before putting it into HTML
@@ -8932,11 +8945,11 @@ function grade(revealed) {
     const d = diagnose(w, cur.f, cur.m, given);
     // A slip of the fingers gets one free fix per question: no hint, no penalty
     if (!d && !typoUsed && isTypo(given, w, A)) {
-      typoUsed = true; input.value = toKana(raw, true); $('#typoNote').hidden = false; input.focus();
+      typoUsed = true; input.value = typedKana(raw); $('#typoNote').hidden = false; input.focus();
       return;
     }
     // Wrong: unlock the next hint and let them keep trying; only Show answer gives it away
-    attempts++; tried.push(toKana(raw, true)); diag = d;
+    attempts++; tried.push(typedKana(raw)); diag = d;
     if (attempts >= 3) $('#word').innerHTML = rubyDiff(w.k, w.r, A.kanji[0], A.kana[0]); // third miss: show the answer on the word
     input.value = ''; input.placeholder = ''; // the hint panel says to try again; English wouldn't fit the squares
     updateTag(); showHints(); input.focus();
@@ -8944,7 +8957,7 @@ function grade(revealed) {
   }
   // The question is finished
   answered = true; qn++;
-  input.value = ok ? toKana(raw, true) : (tried[tried.length - 1] || '');
+  input.value = ok ? typedKana(raw) : (tried[tried.length - 1] || '');
   input.readOnly = true;
   $('#hints').hidden = true;
   updateTag();
@@ -9232,13 +9245,14 @@ function renderReset(confirming) {
 let composing = false;
 input.addEventListener('compositionstart', () => { composing = true; });
 input.addEventListener('compositionend', () => { composing = false; });
-// Turn romaji into kana as you type. Only the text before the cursor is converted, so editing mid-word keeps the cursor in place.
+// Turn romaji into kana as you type (katakana for a katakana word's stem). Only the romaji before the cursor is
+// converted, so editing mid-word keeps the cursor in place.
 input.addEventListener('input', e => {
   if (composing || e.isComposing) return;
   const v = input.value, pos = input.selectionStart ?? v.length;
-  const before = toKana(v.slice(0, pos), false);
-  if (before !== v.slice(0, pos)) {
-    input.value = before + v.slice(pos);
+  const before = toKana(v.slice(0, pos), false), out = katakanaStem(before + v.slice(pos));
+  if (out !== v) {
+    input.value = out;
     input.setSelectionRange(before.length, before.length);
   }
 });
