@@ -1531,7 +1531,9 @@ function renderPrompt() {
 function updateTag() {
   if (!cur) return;
   const w = WORDS[cur.w];
-  $('#tag').textContent = 'Hint: ' + (S.showType || answered || attempts > 0 ? tagFor(w) : (isVerb(w) ? 'Verb' : w.c === 'noun' ? 'Noun' : 'Adjective'));
+  const exact = S.showType || answered || attempts > 0;
+  // Once a wrong try has revealed the exact type, the tag is labelled as the hint it is
+  $('#tag').textContent = (attempts > 0 ? 'Hint: ' : '') + (exact ? tagFor(w) : (isVerb(w) ? 'Verb' : w.c === 'noun' ? 'Noun' : 'Adjective'));
 }
 
 // Every accepted answer for question q, in kana and in kanji spelling
