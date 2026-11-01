@@ -444,7 +444,7 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
     <div class="drill-row">
       <section class="sheet" id="sheet" aria-label="Drill">
         <div class="sheet-top">
-          <div class="tags"><span class="tag" id="tag"></span><span class="tag retry" id="retryTag" hidden></span></div>
+          <div class="tags"><span class="tag" id="tag"></span><span class="tag" id="lvTag" title="JLPT level" hidden></span><span class="tag retry" id="retryTag" hidden></span></div>
           <div class="sheet-meta">
             <span class="timer" id="timer" title="Study time this session. It pauses when you step away." hidden><span lang="ja">時間</span><span id="timerVal">0:00</span></span>
             <span class="qno" id="qno"></span>
@@ -587,6 +587,7 @@ dialog.cheat { width: calc(100% - 24px); max-width: none; } /* the full screen w
           <button class="chip" id="optFuri" aria-pressed="true">Furigana</button>
           <button class="chip" id="optMeaning" aria-pressed="true">Word meaning</button>
           <button class="chip" id="optType" aria-pressed="false">Word type</button>
+          <button class="chip" id="optLevel" aria-pressed="true">JLPT level</button>
           <button class="chip" id="optTimer" aria-pressed="false">Study timer</button>
         </div>
         <p class="muted-note">Study timer shows how long you've studied this session beside the question number, and your time today and in all in Score. It pauses when you step away.</p>
@@ -8671,7 +8672,7 @@ const defaults = () => ({
   types: TYPES.map(t => t[0]), forms: [...BUILTIN_PRESETS[0][1]], // base forms (keys of BASES); starts on the beginner set
   levels: ['core'], // word sets (keys of LEVELS); starts on the hand-picked starter words
   filters: { present: true, past: true, aff: true, neg: true, plain: true, polite: true }, // Versions: which of each pair to include
-  furigana: true, meaning: true, showType: false, stats: {}, best: 0, cheatZoom: 100,
+  furigana: true, meaning: true, showType: false, showLevel: true, stats: {}, best: 0, cheatZoom: 100,
   seen: {}, // times each word has been asked, so every word gets a turn before any repeats
   prompt: 'form', // 'form' names the grammar form; 'meaning' gives an English phrase to put into Japanese
   srs: {}, // review schedule per pattern (word class + form): { s: stability in days, due, n, last }
@@ -8858,7 +8859,7 @@ function next() {
   answered = false;
   $('#drill').hidden = !cur; $('#emptyState').hidden = !!cur;
   $('#qno').textContent = cur ? `第 ${qn + 1} 問` : '';
-  if (!cur) { $('#tag').textContent = 'Nothing selected'; $('#retryTag').hidden = true; $('#formJp').textContent = ''; return; }
+  if (!cur) { $('#tag').textContent = 'Nothing selected'; $('#retryTag').hidden = $('#lvTag').hidden = true; $('#formJp').textContent = ''; return; }
   const w = WORDS[cur.w];
   const kindTag = { review: 'Review', compare: 'Compare' }[cur.kind];
   $('#retryTag').hidden = !kindTag; $('#retryTag').textContent = kindTag || '';
@@ -8899,6 +8900,9 @@ function updateTag() {
   const exact = S.showType || answered || attempts > 0;
   // Once a wrong try has revealed the exact type, the tag is labelled as the hint it is
   $('#tag').textContent = (attempts > 0 ? 'Hint: ' : '') + (exact ? tagFor(w) : (isVerb(w) ? 'Verb' : w.c === 'noun' ? 'Noun' : 'Adjective'));
+  // The word's JLPT level beside it ("N3"), unless switched off; starter words outside the JLPT lists have none
+  $('#lvTag').hidden = !S.showLevel || !w.lv;
+  $('#lvTag').textContent = w.lv ? 'N' + w.lv : '';
 }
 
 // Every accepted answer for question q, in kana and in kanji spelling
@@ -9139,6 +9143,7 @@ function renderDisplay() {
   $('#optMeaning').disabled = english;
   $('#optMeaning').title = english ? 'Hidden while translating from English' : '';
   $('#optType').setAttribute('aria-pressed', S.showType);
+  $('#optLevel').setAttribute('aria-pressed', S.showLevel);
   $('#optTimer').setAttribute('aria-pressed', !!S.timer);
   renderTimer();
   $('#sheet').classList.toggle('no-furigana', !S.furigana);   // the CSS hides furigana / the meaning line from these classes
@@ -9197,6 +9202,7 @@ $('#presetForm').addEventListener('submit', e => {
 $('#optFuri').addEventListener('click', () => { S.furigana = !S.furigana; save(); renderSettings(); });
 $('#optMeaning').addEventListener('click', () => { S.meaning = !S.meaning; save(); renderSettings(); });
 $('#optType').addEventListener('click', () => { S.showType = !S.showType; save(); renderSettings(); });
+$('#optLevel').addEventListener('click', () => { S.showLevel = !S.showLevel; save(); renderSettings(); });
 $('#optTimer').addEventListener('click', () => { S.timer = !S.timer; save(); renderSettings(); });
 
 // Reset all stats (in the Score window): a red button that asks once before clearing anything
