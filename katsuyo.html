@@ -8404,8 +8404,13 @@ function toKana(str, final) {
 }
 // Katakana → hiragana: the two blocks sit 0x60 apart in Unicode
 const kataToHira = s => s.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
-// Normalize an answer for comparison: romaji to kana, katakana to hiragana, no spaces or punctuation
-const norm = s => kataToHira(toKana(s.trim(), true)).replace(/[\s　。、.,!！?？]/g, '');
+// The vowel kana each kana ends in (か → あ, the ゃ of きゃ → あ), read off the romaji table
+const VOWEL = {};
+for (const [r, k] of Object.entries(T)) if (/[aiueo]$/.test(r)) VOWEL[k.slice(-1)] = 'あいうえお'['aiueo'.indexOf(r.slice(-1))];
+// A long-vowel mark becomes the vowel it stretches (こーひー → こおひい), so koohii and ko-hi- both match コーヒー
+const stretch = s => { let out = ''; for (const ch of s) out += ch === 'ー' && VOWEL[out.slice(-1)] || ch; return out; };
+// Normalize an answer for comparison: romaji to kana, katakana to hiragana, long vowels spelled out, no spaces or punctuation
+const norm = s => stretch(kataToHira(toKana(s.trim(), true)).replace(/[\s　。、.,!！?？]/g, ''));
 
 // ---------- Display helpers ----------
 // Escape text before putting it into HTML
@@ -8645,7 +8650,7 @@ function diagnose(w, f, m, given) {
 const SMALL = { 'っ':'つ', 'ゃ':'や', 'ゅ':'ゆ', 'ょ':'よ', 'ぁ':'あ', 'ぃ':'い', 'ぅ':'う', 'ぇ':'え', 'ぉ':'お' };
 function isTypo(given, w, A) {
   // Compare against every accepted answer, kana and kanji, each paired with the dictionary form in the same spelling
-  const tries = [...A.kana.map(a => [norm(a), w.r]), ...A.kanji.map(a => [norm(a), w.k])];
+  const tries = [...A.kana.map(a => [norm(a), norm(w.r)]), ...A.kanji.map(a => [norm(a), norm(w.k)])];
   for (const [ans, dict] of tries) {
     if (Math.abs(ans.length - given.length) > 1) continue;     // more than one kana added or missing: not a typo
     let i = 0;                                                 // i = where the two strings start to differ…
@@ -8920,7 +8925,7 @@ function grade(revealed) {
   if (!S.seenIntro) { S.seenIntro = true; save(); }
   $('#intro').hidden = true;
   const A = answersFor(cur), given = norm(raw);
-  const ok = !revealed && (A.kana.includes(given) || A.kanji.includes(given));
+  const ok = !revealed && [...A.kana, ...A.kanji].some(a => norm(a) === given); // compared normalized, so カタカナ matches かたかな
   const w = WORDS[cur.w];
   $('#typoNote').hidden = true;
   if (!revealed && !ok) {
