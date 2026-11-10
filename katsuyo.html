@@ -662,6 +662,12 @@ dialog.tour::backdrop { background: transparent; }
         <div class="chips" id="promptChips"></div>
         <p class="muted-note">Translate from English gives a meaning to put into Japanese, like “I didn't write” + Polite, instead of naming the form.</p>
       </div>
+
+      <div class="block">
+        <h2><span>Question order</span><span class="jp" lang="ja">順番</span></h2>
+        <div class="chips" id="orderChips"></div>
+        <p class="muted-note">Smart review brings back what you miss a few questions later and reviews each rule on a schedule. True random picks any question you have switched on, each one equally likely, with no retries or reviews.</p>
+      </div>
     </div>
   </div>
 </dialog>
@@ -8820,6 +8826,7 @@ const defaults = () => ({
   font: 'brush', // Japanese font: 'brush', 'print' or 'clean' (see FONT_STYLES)
   seen: {}, // times each word has been asked, so every word gets a turn before any repeats
   prompt: 'form', // 'form' names the grammar form; 'meaning' gives an English phrase to put into Japanese
+  order: 'smart', // Question order: 'smart' (retries and spaced review, see pick) or 'random' (see pickRandom)
   srs: {}, // review schedule per pattern (word class + form): { s: stability in days, due, n, last }
   speed: { avg: 1, n: 0 }, // usual answer time relative to answer length, to spot slow-but-correct answers
   presets: [], // your saved setups: { name, forms, filters, types, levels, prompt }
@@ -8932,12 +8939,32 @@ function isSlow(ms, ans) {
   return slow;
 }
 
+// Question order, as Study settings lists it
+const ORDERS = [['smart', 'Smart review'], ['random', 'True random']];
+// True random: every question the settings allow (each word in each form and version) is equally likely, with no
+// retries, reviews or contrasts; only the exact question just asked is skipped. Answers are still scored and
+// scheduled, so Smart review picks up where it left off.
+function pickRandom(pats) {
+  const all = [...pats.values()], prev = cur;
+  let q;
+  for (let tries = 0; tries < 10; tries++) {
+    const p = wpick(all, all.map(x => x.words.length));      // a pattern, as likely as the number of words it covers
+    q = { w: rand(p.words), base: p.base, f: p.f, m: p.m, kind: 'random' };
+    if (!prev || q.w !== prev.w || q.f !== prev.f || q.m !== prev.m) break;
+  }
+  return q;
+}
+
 // Choose the next question. In order: a missed pattern that's due back, now and then a deliberate contrast,
-// a pattern due for spaced review, or else something new or close to due.
+// a pattern due for spaced review, or else something new or close to due. Retries and reviews never take two
+// questions in a row: otherwise a run of misses on one form (past tense, say) or a few days of reviews piling up
+// fills every question, and the other forms switched on never come up. At least every other question is fresh.
 function pick() {
   const { pats, spec, allows, words } = getPool();
   if (!pats.size) return null;
+  if (S.order === 'random') return pickRandom(pats);
   const now = Date.now(), prev = cur, prevKey = prev && patKey(WORDS[prev.w], prev.f, prev.m);
+  const mayRepeat = !prev || (prev.kind !== 'review' && prev.kind !== 'due'); // may this one be a retry or review?
 
   // Deal words like a shuffled deck: least-seen first, never one from the last several questions
   const lim = Math.min(15, Math.floor(words / 2));              // how many recent words to keep out of rotation
@@ -8954,7 +8981,7 @@ function pick() {
 
   // 1. A missed pattern comes back on schedule, with a different word each time
   for (const k of loop.keys()) if (!pats.has(k)) loop.delete(k); // forget retries the Study settings no longer allow
-  const back = [...loop].find(([k, it]) => it.due <= qn && k !== prevKey);
+  const back = mayRepeat && [...loop].find(([k, it]) => it.due <= qn && k !== prevKey);
   if (back) return ask(pats.get(back[0]), back[1].w, 'review');
 
   // 2. Sometimes set up a contrast with the last question: a look-alike word, or a form it's easy to confuse with.
@@ -8971,7 +8998,7 @@ function pick() {
   }
 
   // 3. Patterns due for review, most overdue first
-  const due = [...pats.keys()].filter(k => S.srs[k] && S.srs[k].due <= now && k !== prevKey && !loop.has(k))
+  const due = !mayRepeat ? [] : [...pats.keys()].filter(k => S.srs[k] && S.srs[k].due <= now && k !== prevKey && !loop.has(k))
     .sort((a, b) => S.srs[a].due - S.srs[b].due);
   if (due.length) return ask(pats.get(rand(due.slice(0, 3))), prev && prev.w, 'due'); // one of the 3 most overdue
 
@@ -8981,12 +9008,15 @@ function pick() {
   for (const p of pats.values()) { if (!versions.has(p.base)) versions.set(p.base, new Set()); versions.get(p.base).add(qid(p.f, p.m)); }
   const bases = [...versions.keys()], b = wpick(bases, bases.map(x => Math.sqrt(versions.get(x).size)));
   const cands = [...pats.values()].filter(p => p.base === b);
-  // Never seen: weight 2. Seen: 0.3, rising to 1.3 as it approaches its due date
-  const weight = k => { const c = S.srs[k]; return !c ? 2 : .3 + Math.min(1, (now - c.last) / ((c.s || 1) * DAY)); };
+  // Never seen: weight 2. Seen: 0.3, rising to 1.3 as it approaches its due date. A form waiting in the retry loop
+  // (for any word class: missing 書いた and 読んだ queues two past-tense retries) gets 0.1, since step 1 already
+  // brings it back; fresh picks go to the other forms.
+  const retrying = new Set([...loop.keys()].map(k => k.slice(k.indexOf(':') + 1))); // "gく:ta" → "ta"
+  const weight = p => { if (retrying.has(qid(p.f, p.m))) return .1; const c = S.srs[p.key]; return !c ? 2 : .3 + Math.min(1, (now - c.last) / ((c.s || 1) * DAY)); };
   // A pattern also counts once per word that shares it, so each word gets a fair turn: otherwise いい (a pattern of
   // two words) would come up as often as the other 43 い-adjectives together. Patterns with one or two words, like
   // 行く, 来る and いい, count as SPECIAL_BOOST words so their quirks still come up every so often.
-  return ask(wpick(cands, cands.map(p => weight(p.key) * Math.max(SPECIAL_BOOST, p.words.length))), prev && prev.w, 'new');
+  return ask(wpick(cands, cands.map(p => weight(p) * Math.max(SPECIAL_BOOST, p.words.length))), prev && prev.w, 'new');
 }
 
 // ---------- The drill ----------
@@ -9289,6 +9319,8 @@ function renderDisplay() {
   const pc = $('#promptChips'); pc.innerHTML = '';
   [['form', 'Name the form'], ['meaning', 'Translate from English']].forEach(([id, label]) =>
     pc.append(chip(label, (S.prompt || 'form') === id, () => { S.prompt = id; save(); renderSettings(); renderPrompt(); })));
+  const oc = $('#orderChips'); oc.innerHTML = '';                // Question order: takes effect from the next question
+  ORDERS.forEach(([id, label]) => oc.append(chip(label, S.order === id, () => { S.order = id; save(); renderSettings(); })));
   $('#optFuri').setAttribute('aria-pressed', S.furigana);
   $('#optMeaning').setAttribute('aria-pressed', S.meaning && !english);
   $('#optMeaning').disabled = english;
@@ -9873,6 +9905,7 @@ setInterval(() => {
 $('#intro').hidden = !!S.seenIntro;
 if (!TEXT_SIZES.some(([n]) => n === S.textSize)) S.textSize = 100; // a size no longer offered goes back to Standard
 if (!FONT_STYLES.some(([id]) => id === S.font)) S.font = 'brush';
+if (!ORDERS.some(([id]) => id === S.order)) S.order = 'smart';
 applyTextSize(); applyFont(); renderSettings(); renderStats(); renderReset(false); next();
 if (!S.seenTour) startTour();
 </script>
